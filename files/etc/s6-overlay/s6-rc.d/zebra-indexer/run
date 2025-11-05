@@ -1,0 +1,16 @@
+#!/command/execlineb -P
+with-contenv
+
+importas -D "" elastic USE_ELASTICSEARCH
+
+if -n { test "${elastic}" = "true" }
+
+redirfd -a 1 /var/log/koha/default/zebra-indexer.log
+
+fdmove -c 2 1
+
+s6-envdir /etc/koha-envvars
+
+s6-setuidgid default-koha
+
+/usr/bin/perl /usr/share/koha/bin/migration_tools/rebuild_zebra.pl -daemon -sleep 5
