@@ -1,41 +1,55 @@
-# koha-docker
+# Koha Docker (v25.05 ready) 🐳📚
 
-![Docker Image Version (tag latest semver)](https://img.shields.io/docker/v/teogramm/koha/latest)
+Цей репозиторій містить **повністю робочу** Docker-конфігурацію для запуску автоматизованої бібліотечної системи **Koha версії 25.05**.
 
-A Koha Docker container which includes:
-* The Apache webserver serving the OPAC (Port 8080) and
-the Koha staff interface (Port 8081), configured to use Plack.
-* The Zebra server and indexer.
-* The Koha background jobs worker.
+Проєкт є форком/модифікацією чудового репозиторію [teogramm/koha-docker](https://github.com/teogramm/koha-docker.git), адаптованим для стабільної роботи в середовищі **Windows + WSL 2** (хоча чудово працюватиме і на чистому Linux).
 
-A fully functional Koha instance additionally requires:
-* A MySQL/MariaDB server.
-* A Memcached server.
-* A RabbitMQ server with the stomp pulgin enabled.
+![Koha Logo](https://koha-community.org/images/koha-logo-navbar.png)
 
-Elasticsearch is also supported, instead of Zebra.
+---
 
-*Notice: SIP and Z3950 are still WIP.*
+## ✨ Особливості та Фічі
 
-A separate RabbitMQ server with the stomp plugin is required as well as a Memcached server.
-Both can be easily created using the images available on Docker Hub.
+Ця збірка Koha — це сучасний, швидкий та надійний варіант для розгортання бібліотеки.
 
-## Usage
-The image is available on [Docker Hub](https://hub.docker.com/r/teogramm/koha)
+* **Версія Koha:** 25.05 (встановлюється з офіційних репозиторіїв Debian).
+* **Архітектура:** Мікросервісна (Koha, База даних, Пошук, Кеш, Черги — все в окремих контейнерах).
+* **Веб-сервер:** Apache2 + **Plack (Starman)**. Це забезпечує значно вищу швидкість роботи порівняно зі старим CGI-режимом.
+* **Пошуковий рушій:** **Elasticsearch 8.19.6** (з попередньо встановленим плагіном `analysis-icu` для коректної роботи з різними мовами).
+* **База даних:** MariaDB 11.
+* **Кешування:** Memcached (для прискорення роботи сесій та системи).
+* **Черги повідомлень:** **RabbitMQ** (з плагіном STOMP). Необхідний для сучасних фонових завдань Koha та реального часу оновлення інформації.
 
-The main configuration environment variables are documented in
-[config-main.env](config-main.env).
+---
 
-The username and password for the initial setup are the same as the database username and password.
+## 🛠️ Що було змінено відносно оригіналу
 
-Logs for stored under the `/var/log/koha` directory.
+Оригінальний репозиторій був чудовою базою, але потребував доопрацювання для роботи на сучасних версіях Koha та в специфічних умовах Windows/WSL.
 
-In order to function, Koha requires a MySQL database, a Memcached server and a RabbitMQ server with the stomp plugin.
+**Внесені ключові зміни:**
 
-The provided [docker-compose file](examples/docker-compose.yaml) sets up all of these as containers. It provides an easy way to
-get a Koha insstance up and running. For a production environment it is recommened that each container is set up separately.
+1.  **Адаптація для Windows (WSL 2):**
+    * Додано утиліту `dos2unix` у процес збірки. Вона автоматично виправляє проблему з Windows-закінченнями рядків (CRLF) у скриптах, через які контейнери "падали" при запуску на Windows-хостах.
+2.  **Оновлення компонентів:**
+    * Додано підтримку **Elasticsearch 8.x** із автоматичним встановленням обов'язкового плагіна `analysis-icu` під час збірки.
+    * Оновлено версії базових образів.
+3.  **Виправлення конфігурації (`docker-compose.yaml`):**
+    * Додано коректні `healthcheck` (перевірки здоров'я) для бази даних та RabbitMQ. Це вирішує проблему "гонки", коли Koha намагалася запуститися раніше, ніж база даних була готова.
+    * Сервіс Koha тепер чекає на повну готовність (`service_healthy`) інших сервісів перед стартом.
+    * Виправлено монтування плагінів RabbitMQ (тепер використовується вбудований образ замість локальної папки, що уникає проблем з правами доступу на Windows).
+4.  **Параметризація:**
+    * Усі секрети (паролі, назви баз даних) винесені у файл `.env`, що робить конфігурацію безпечнішою та гнучкішою.
 
-## Credits
+---
 
-Some scripts have been taken from https://gitlab.com/koha-community/docker/koha-docker and modified.
+## 🚀 Інструкція зі Встановлення
 
+### Передумови
+* Встановлений **Docker Desktop** (на Windows) або Docker Engine (на Linux).
+* Якщо ви на Windows, переконайтеся, що використовуєте **WSL 2** бекенд.
+
+### Крок 1: Клонування репозиторію
+
+```bash
+git clone [https://github.com/ВАШ_ЛОГІН/ВАШ_РЕПОЗИТОРІЙ.git](https://github.com/ВАШ_ЛОГІН/ВАШ_РЕПОЗИТОРІЙ.git)
+cd ВАШ_РЕПОЗИТОРІЙ/examples
