@@ -41,6 +41,9 @@ services:
       es:
          condition: service_healthy
     restart: always
+    volumes:
+      - koha_config:/etc/koha/sites
+      - koha_data:/var/lib/koha
 
   rabbitmq:
     build: ../rabbitmq  
@@ -51,6 +54,9 @@ services:
 
   db:
     image: docker.io/mariadb:11
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
     volumes:
       - mariadb-koha:/var/lib/mysql
     environment:
@@ -96,6 +102,8 @@ services:
 
 volumes:
     mariadb-koha:
+    koha_config:
+    koha_data:
 
 networks:
     koha:
