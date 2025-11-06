@@ -23,7 +23,14 @@ services:
       KOHA_INSTANCE: ${KOHA_INSTANCE}
       KOHA_DOMAIN: ${KOHA_DOMAIN}
       MEMCACHED_SERVERS: memcached:11211
+      USE_ELASTICSEARCH: "true"
+      ELASTICSEARCH_HOST: es:9200
+      # --- ВИПРАВЛЕНО: Беремо з .env ---
+      TZ: ${KOHA_TIMEZONE}
+      KOHA_TIMEZONE: ${KOHA_TIMEZONE}
+      # Налаштування RabbitMQ (Беремо з .env)
       MB_HOST: rabbitmq
+      MB_PORT: 61613
     depends_on:
       db:
          condition: service_healthy
@@ -31,12 +38,13 @@ services:
          condition: service_started
       memcached:
          condition: service_started
+      es:
+         condition: service_healthy
     restart: always
 
   rabbitmq:
-    image: docker.io/rabbitmq:3-management
-    environment:
-        - RABBITMQ_DEFAULT_PLUGINS=rabbitmq_stomp
+    build: ../rabbitmq  
+    image: koha-local-rabbitmq 
     networks:
         - koha
     restart: always
@@ -55,7 +63,26 @@ services:
     restart: always
     healthcheck:
       # Тепер healthcheck використовує змінні з .env!
-      test: ["CMD-SHELL", "mariadb-admin ping -h localhost -u ${DB_USER} -p'${DB_PASS}' || exit 1"]
+      test: ["CMD-SHELL", "mariadb-admin ping -h localhost -u ${DB_USER} -p${DB_PASS} || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 90s
+
+  es:
+    build:
+      context: ..
+      dockerfile: elasticsearch/Dockerfile
+    image: my-local-es:8.19.6
+    environment:
+      - "discovery.type=single-node"
+      - "xpack.security.enabled=false"
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    networks:
+      - koha
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9200"]
       interval: 10s
       timeout: 5s
       retries: 5
