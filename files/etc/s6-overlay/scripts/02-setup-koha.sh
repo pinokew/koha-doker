@@ -43,7 +43,7 @@ fi
 if ! is_instance ${KOHA_INSTANCE} || [ ! -f "/etc/koha/sites/${KOHA_INSTANCE}/koha_conf.xml" ]
 then
     echo "Executing koha-create for instance ${KOHA_INSTANCE}"
-    koha-create ${ES_PARAMS} ${MB_PARAMS} --use-db ${KOHA_INSTANCE}
+    koha-create --timezone ${TZ} ${ES_PARAMS} ${MB_PARAMS} --use-db ${KOHA_INSTANCE}
 else
     echo "Creating directory structure"
     koha-create-dirs ${KOHA_INSTANCE}

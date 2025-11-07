@@ -31,7 +31,13 @@ RUN echo ${TARGETARCH} && case ${TARGETARCH} in \
 RUN mkdir -p /etc/apt/keyrings/ && \
     wget -qO - https://debian.koha-community.org/koha/gpg.asc | gpg --dearmor -o /etc/apt/keyrings/koha.gpg && \
     echo "deb [signed-by=/etc/apt/keyrings/koha.gpg] https://debian.koha-community.org/koha ${KOHA_VERSION}  main bullseye" | tee /etc/apt/sources.list.d/koha.list
-
+# Встановлюємо локалі, необхідні для Koha (en + uk)
+RUN apt-get update && apt-get install -y locales && \
+    echo "en_US.UTF-8 UTF-8" >> /etc/locale.gen && \
+    echo "uk_UA.UTF-8 UTF-8" >> /etc/locale.gen && \
+    locale-gen && \
+    apt-get purge -y --auto-remove -y locales && \
+    rm -rf /var/lib/apt/lists/*
 # Install Koha
 RUN apt-get update \
     && apt-get install -y koha-core \
