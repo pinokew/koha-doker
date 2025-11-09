@@ -52,8 +52,12 @@ fi
 # Configure search daemon
 if [ "${USE_ELASTICSEARCH}" = "true" ]
 then
-    koha-elasticsearch --rebuild -p $(grep -c ^processor /proc/cpuinfo) ${KOHA_INSTANCE} &
+    echo "% * Starting ES indexer daemon"
+    koha-shell ${KOHA_INSTANCE} -c \
+        "/usr/share/koha/bin/workers/es_indexer_daemon.pl" \
+        >> /var/log/koha/${KOHA_INSTANCE}/elasticsearch-indexer.log 2>&1 &
 fi
+
 
 for i in $(koha-translate -l)
 do

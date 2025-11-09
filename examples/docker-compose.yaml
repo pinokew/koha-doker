@@ -74,6 +74,7 @@ services:
       timeout: 5s
       retries: 5
       start_period: 90s
+    
 
   es:
     build:
@@ -93,6 +94,8 @@ services:
       timeout: 5s
       retries: 5
       start_period: 90s
+    volumes:
+    - es-data:/usr/share/elasticsearch/data**
 
   memcached:
     image: docker.io/memcached
@@ -104,6 +107,7 @@ volumes:
     mariadb-koha:
     koha_config:
     koha_data:
+    es-data:
 
 networks:
     koha:
