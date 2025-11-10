@@ -1,6 +1,6 @@
 #!/command/with-contenv bash
-
-export KOHA_INSTANCE=default
+set -euo pipefail
+export KOHA_INSTANCE=${KOHA_INSTANCE:-default}
 
 export KOHA_INTRANET_PORT=8081
 export KOHA_OPAC_PORT=8080
@@ -27,7 +27,7 @@ rm /etc/mysql/koha-common.cnf && envsubst < /docker/templates/koha-common.cnf > 
 chmod 660 /etc/mysql/koha-common.cnf
 
 # Create entry with admin username, password and myqsl server for this instance
-echo -n "default:${MYSQL_USER}:${MYSQL_PASSWORD}:${DB_NAME}:${MYSQL_SERVER}" > /etc/koha/passwd
+echo -n "${KOHA_INSTANCE}:${MYSQL_USER}:${MYSQL_PASSWORD}:${DB_NAME}:${MYSQL_SERVER}" > /etc/koha/passwd
 
 source /usr/share/koha/bin/koha-functions.sh
 
@@ -49,53 +49,92 @@ else
     koha-create-dirs ${KOHA_INSTANCE}
 fi
 
-# Configure search daemon
-if [ "${USE_ELASTICSEARCH}" = "true" ]
-then
-    echo "% * Starting ES indexer daemon"
-    koha-shell ${KOHA_INSTANCE} -c \
-        "/usr/share/koha/bin/workers/es_indexer_daemon.pl" \
-        >> /var/log/koha/${KOHA_INSTANCE}/elasticsearch-indexer.log 2>&1 &
+# === NEW: symlink global koha-conf.xml ===
+if [ -f "/etc/koha/sites/${KOHA_INSTANCE}/koha-conf.xml" ]; then
+  ln -sf "/etc/koha/sites/${KOHA_INSTANCE}/koha-conf.xml" /etc/koha/koha-conf.xml
 fi
 
+# Configure search daemon
+if [ "${USE_ELASTICSEARCH}" = "true" ]; then
+    # Чекаємо, поки з'явиться таблиця systempreferences (тобто веб-інсталятор уже пройдено)
+    if koha-mysql "${KOHA_INSTANCE}" -e "SHOW TABLES LIKE 'systempreferences';" | grep -q systempreferences; then
+        echo "% * Starting ES indexer daemon"
+        koha-shell "${KOHA_INSTANCE}" -c \
+            "/usr/share/koha/bin/workers/es_indexer_daemon.pl" \
+            >> "/var/log/koha/${KOHA_INSTANCE}/elasticsearch-indexer.log" 2>&1 &
+    else
+        echo "% * Skipping ES indexer daemon: systempreferences not ready yet"
+    fi
+fi
 
-for i in $(koha-translate -l)
+# ---------- Language setup (don't break init if it fails) ----------
+echo "KOHA_LANGS at startup: '${KOHA_LANGS:-}'"
+
+# Тимчасово вимикаємо 'exit on error' для блоку мов
+set +e
+
+# 1) Поточні встановлені мови (може бути порожній список)
+EXISTING_LANGS=$(koha-translate -l 2>/dev/null || echo "")
+
+for i in ${EXISTING_LANGS}
 do
-    if [ "${KOHA_LANGS}" = "" ] || ! echo "${KOHA_LANGS}"|grep -q -w $i
+    if [ -z "${KOHA_LANGS:-}" ] || ! echo "${KOHA_LANGS}" | grep -q -w "$i"
     then
         echo "Removing language $i"
-        koha-translate -r $i
+        koha-translate -r "$i"
     else
         echo "Checking language $i"
-        koha-translate -c $i
+        koha-translate -c "$i"
     fi
 done
 
-if [ "${KOHA_LANGS}" != "" ]
+if [ -n "${KOHA_LANGS:-}" ]
 then
-    echo "Installing languages"
-    LANGS=$(koha-translate -l)
-    for i in $KOHA_LANGS
+    echo "Installing languages (KOHA_LANGS=${KOHA_LANGS})"
+    EXISTING_LANGS=$(koha-translate -l 2>/dev/null || echo "")
+    for i in ${KOHA_LANGS}
     do
-        if ! echo "${LANGS}"|grep -q -w $i
+        if ! echo "${EXISTING_LANGS}" | grep -q -w "$i"
         then
             echo "Installing language $i"
-            koha-translate -i $i
+            koha-translate -i "$i"
         else
             echo "Language $i already present"
         fi
     done
 fi
 
+# Повертаємо строгий режим
+set -e
+# ---------- end language setup ----------
+
+
 koha-plack --enable ${KOHA_INSTANCE}
 a2enmod proxy
 
+# Директорія для Plack-сокета
+mkdir -p /var/run/koha/${KOHA_INSTANCE}
+chown ${KOHA_INSTANCE}-koha:${KOHA_INSTANCE}-koha /var/run/koha/${KOHA_INSTANCE}
+
+mkdir -p /var/log/koha/${KOHA_INSTANCE}
+
 # Prevent Plack from throwing permission errors
-touch /var/log/koha/${KOHA_INSTANCE}/opac-error.log /var/log/koha/${KOHA_INSTANCE}/intranet-error.log
+touch \
+  /var/log/koha/${KOHA_INSTANCE}/opac-error.log \
+  /var/log/koha/${KOHA_INSTANCE}/intranet-error.log \
+  /var/log/koha/${KOHA_INSTANCE}/plack.log
+
 chown -R ${KOHA_INSTANCE}-koha:${KOHA_INSTANCE}-koha /var/log/koha/${KOHA_INSTANCE}/
 
-service apache2 stop
-koha-indexer --stop ${KOHA_INSTANCE}
-koha-zebra --stop ${KOHA_INSTANCE}
-koha-worker --stop ${KOHA_INSTANCE}
-koha-email-enable ${KOHA_INSTANCE}
+
+# Акуратно зупиняємо сервіси, не валячи весь скрипт,
+# якщо вони ще не були запущені
+set +e
+service apache2 stop || true
+koha-indexer --stop ${KOHA_INSTANCE} || true
+koha-zebra --stop ${KOHA_INSTANCE} || true
+koha-worker --stop ${KOHA_INSTANCE} || true
+koha-email-enable ${KOHA_INSTANCE} || true
+set -e
+
+exit 0

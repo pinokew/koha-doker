@@ -1,5 +1,6 @@
 services:
   koha:
+    container_name: koha-app
     build:
       context: ..
       dockerfile: Dockerfile
@@ -31,6 +32,8 @@ services:
       # Налаштування RabbitMQ (Беремо з .env)
       MB_HOST: rabbitmq
       MB_PORT: 61613
+      KOHA_CONF: /etc/koha/sites/library/koha-conf.xml
+
     depends_on:
       db:
          condition: service_healthy
@@ -46,6 +49,7 @@ services:
       - koha_data:/var/lib/koha
 
   rabbitmq:
+    container_name: koha-rabbitmq
     build: ../rabbitmq  
     image: koha-local-rabbitmq 
     networks:
@@ -53,6 +57,7 @@ services:
     restart: always
 
   db:
+    container_name: koha-db
     image: docker.io/mariadb:11
     command:
       - --character-set-server=utf8mb4
@@ -77,6 +82,7 @@ services:
     
 
   es:
+    container_name: koha-es
     build:
       context: ..
       dockerfile: elasticsearch/Dockerfile
@@ -95,9 +101,10 @@ services:
       retries: 5
       start_period: 90s
     volumes:
-     - es-data:/usr/share/elasticsearch/data**
+      - es-data:/usr/share/elasticsearch/data
 
   memcached:
+    container_name: koha-memcached   
     image: docker.io/memcached
     networks:
       - koha

@@ -9,7 +9,7 @@ fdmove -c 2 1
 
 s6-envdir /etc/koha-envvars
 
-s6-setuidgid default-koha
+s6-setuidgid library-koha
 
 /usr/bin/zebrasrv -v 1 -f /etc/koha/sites/default/koha-conf.xml
 
