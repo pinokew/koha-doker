@@ -79,22 +79,29 @@ fi
 # Це гарантує, що koha-conf.xml ЗАВЖДИ має пароль з .env,
 # навіть якщо інстанс вже був створений.
 # Гарантує, що koha-conf.xml ЗАВЖДИ має DB_USER/DB_PASS з .env
+# --- АВТОМАТИЧНЕ ВИПРАВЛЕННЯ БАЗИ ДАНИХ (Метод SED) ---
 if [ -f "/etc/koha/sites/${KOHA_INSTANCE}/koha-conf.xml" ]; then
     echo "Updating Database credentials in koha-conf.xml..."
-    # ВИПРАВЛЕНО: Використовуємо MYSQL_USER та MYSQL_PASSWORD
     sed -i "s|<user>.*</user>|<user>${MYSQL_USER}</user>|g" "/etc/koha/sites/${KOHA_INSTANCE}/koha-conf.xml"
     sed -i "s|<pass>.*</pass>|<pass>${MYSQL_PASSWORD}</pass>|g" "/etc/koha/sites/${KOHA_INSTANCE}/koha-conf.xml"
 fi
-# --- КІНЕЦЬ БЛОКУ ---
 
-# --- АВТОМАТИЧНЕ ВИПРАВЛЕННЯ RABBITMQ ---
-
+# --- АВТОМАТИЧНЕ ВИПРАВЛЕННЯ RABBITMQ (Метод SED) ---
 if [ -f "/etc/koha/sites/${KOHA_INSTANCE}/koha-conf.xml" ]; then
     echo "Updating RabbitMQ credentials in koha-conf.xml..."
-    # Використовуємо "|" як роздільник для sed, бо паролі можуть містити "/"
     sed -i "s|<username>.*</username>|<username>${MB_USER}</username>|g" "/etc/koha/sites/${KOHA_INSTANCE}/koha-conf.xml"
     sed -i "s|<password>.*</password>|<password>${MB_PASS}</password>|g" "/etc/koha/sites/${KOHA_INSTANCE}/koha-conf.xml"
     sed -i "s|<vhost>.*</vhost>|<vhost>/</vhost>|g" "/etc/koha/sites/${KOHA_INSTANCE}/koha-conf.xml"
+fi
+
+# --- АВТОМАТИЧНЕ ВИПРАВЛЕННЯ PLACK WORKER (Метод SED) ---
+if [ -f "/etc/koha/sites/${KOHA_INSTANCE}/koha-conf.xml" ]; then
+    echo "Disabling Plack queue processing (run_in_plack=0)..."
+    if ! grep -q "<run_in_plack>" "/etc/koha/sites/${KOHA_INSTANCE}/koha-conf.xml"; then
+        sed -i "s|</background_jobs_worker>|    <run_in_plack>0</run_in_plack>\n</background_jobs_worker>|g" "/etc/koha/sites/${KOHA_INSTANCE}/koha-conf.xml"
+    else
+        sed -i "s|<run_in_plack>.*</run_in_plack>|<run_in_plack>0</run_in_plack>|g" "/etc/koha/sites/${KOHA_INSTANCE}/koha-conf.xml"
+    fi
 fi
 
 # --- Файлова система: логи, кеш, спулі, run ---
@@ -154,13 +161,12 @@ koha-plack --enable "${KOHA_INSTANCE}" || true
 # НЕ запускаємо es_indexer_daemon.pl напряму, тільки background_jobs_worker
 
 # Загальний воркер (для різних завдань)
+# --- Воркери (черги) ---
 koha-worker --start "${KOHA_INSTANCE}" || true
-
-# Воркер для довгих завдань
 koha-worker --start --queue long_tasks "${KOHA_INSTANCE}" || true
 
-# Воркер САМЕ ДЛЯ ELASTICSEARCH (найважливіший для нас)
-koha-worker --start --queue elastic_index "${KOHA_INSTANCE}" || true
+# ВИПРАВЛЕНО: Запускаємо ПРАВИЛЬНИЙ демон ES-індексації
+/usr/sbin/koha-es-indexer --start "${KOHA_INSTANCE}" || true
 
 # --- Мови (KOHA_LANGS) ---
 echo "KOHA_LANGS at startup: '${KOHA_LANGS:-}'"
