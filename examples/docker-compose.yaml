@@ -32,6 +32,8 @@ services:
       # Налаштування RabbitMQ (Беремо з .env)
       MB_HOST: rabbitmq
       MB_PORT: 61613
+      MB_USER: ${RABBITMQ_USER}
+      MB_PASS: ${RABBITMQ_PASS}
       KOHA_CONF: /etc/koha/sites/library/koha-conf.xml
 
     depends_on:
@@ -52,6 +54,9 @@ services:
     container_name: koha-rabbitmq
     build: ../rabbitmq  
     image: koha-local-rabbitmq 
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS}
     networks:
         - koha
     restart: always
@@ -99,7 +104,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 90s
+      start_period: 120s
     volumes:
       - es-data:/usr/share/elasticsearch/data
 
