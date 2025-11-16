@@ -1,3 +1,5 @@
+# Based on Koha 25.05.x default, customized for KDV (date: 2025-11-16).
+
 [client]
 host     = ${MYSQL_SERVER}
 user     = root

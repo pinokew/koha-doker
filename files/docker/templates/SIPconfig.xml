@@ -1,3 +1,5 @@
+<!-- Based on Koha 25.05.x default, customized for KDV (date: 2025-11-16). -->
+
 <acsconfig xmlns="http://openncip.org/acs-config/1.0/">
 <!-- above address gets nothing, it's just a namespace -->
   <error-detect enabled="true" />

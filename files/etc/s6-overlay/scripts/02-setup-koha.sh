@@ -1,6 +1,14 @@
 #!/command/with-contenv bash
 set -u
 
+# --- ПАТЧ KOHA-CREATE: обхід вимоги mpm_itk в Docker (KDV) ---
+if [ -x /usr/sbin/koha-create ]; then
+  if ! grep -q "mpm_itk check bypassed inside Docker (KDV setup)" /usr/sbin/koha-create; then
+    echo "Patching koha-create: bypass mpm_itk requirement for Docker..."
+    perl -0pi -e 's/(Koha requires mpm_itk to be enabled within Apache in order to run\.\n.*?EOM\s*\n\s*)die/\1echo "WARNING: mpm_itk check bypassed inside Docker (KDV setup), proceeding without it." 1>&2\n        #die/s' /usr/sbin/koha-create || echo "WARNING: koha-create mpm_itk patch failed, please check manually."
+  fi
+fi
+
 # --- Базові змінні ---
 export KOHA_INSTANCE=${KOHA_INSTANCE:-library}
 export KOHA_INTRANET_PORT=8081
