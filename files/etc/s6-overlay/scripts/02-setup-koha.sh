@@ -1,10 +1,11 @@
-#!/command/with-contenv bash
+#!/bin/bash
+
 set -u
 
-# --- ПАТЧ KOHA-CREATE: обхід вимог mpm_itk, mod_cgi та existing user в Docker (KDV) ---
+# --- ПАТЧ KOHA-CREATE: обхід вимог Apache та existing user/group в Docker (KDV) ---
 if [ -x /usr/sbin/koha-create ]; then
   if ! grep -q "mpm_itk check bypassed inside Docker (KDV setup)" /usr/sbin/koha-create; then
-    echo "Patching koha-create: bypass mpm_itk, mod_cgi & user-exists checks for Docker..."
+    echo "Patching koha-create: bypass mpm_itk, mod_cgi, mod_rewrite & user/group-exists checks for Docker..."
 
     # 1) Обхід перевірки mpm_itk
     perl -0pi -e 's/(Koha requires mpm_itk to be enabled within Apache in order to run\.\n.*?EOM\s*\n\s*)die/\1echo "WARNING: mpm_itk check bypassed inside Docker (KDV setup), proceeding without it." 1>&2\n        #die/s' /usr/sbin/koha-create \
@@ -14,13 +15,19 @@ if [ -x /usr/sbin/koha-create ]; then
     perl -0pi -e 's/(Koha requires mod_cgi to be enabled within Apache in order to run\.\n.*?EOM\s*\n\s*)die/\1echo "WARNING: mod_cgi check bypassed inside Docker (KDV setup), proceeding without it." 1>&2\n        #die/s' /usr/sbin/koha-create \
       || echo "WARNING: koha-create mod_cgi patch failed, please check manually."
 
-    # 3) Обхід фаталу "User ... already exists."
-    perl -0pi -e 's/(User [^\n]* already exists\.\n.*?EOM\s*\n\s*)die/\1echo "WARNING: instance user already exists (Docker KDV), skipping useradd and continuing." 1>&2\n        #die/s' /usr/sbin/koha-create \
+    # 3) Обхід перевірки mod_rewrite
+    perl -0pi -e 's/(Koha requires mod_rewrite to be enabled within Apache in order to run\.\n.*?EOM\s*\n\s*)die/\1echo "WARNING: mod_rewrite check bypassed inside Docker (KDV setup), proceeding without it." 1>&2\n        #die/s' /usr/sbin/koha-create \
+      || echo "WARNING: koha-create mod_rewrite patch failed, please check manually."
+
+    # 4) Обхід фаталів "User ... already exists."
+    perl -0pi -e 's/die "User \$username already exists\.";/echo "WARNING: instance user already exists (Docker KDV), continuing." 1>&2\n        : # skip die/' /usr/sbin/koha-create \
       || echo "WARNING: koha-create user-exists patch failed, please check manually."
+
+    # 5) Обхід фаталів "Group ... already exists."
+    perl -0pi -e 's/die "Group \$username already exists\.";/echo "WARNING: instance group already exists (Docker KDV), continuing." 1>&2\n        : # skip die/' /usr/sbin/koha-create \
+      || echo "WARNING: koha-create group-exists patch failed, please check manually."
   fi
 fi
-
-
 
 # --- Базові змінні ---
 export KOHA_INSTANCE=${KOHA_INSTANCE:-library}
@@ -38,8 +45,8 @@ export KOHA_ES_NAME=${KOHA_ES_NAME:-es}
 # RabbitMQ settings
 export MB_HOST=${MB_HOST:-rabbitmq}
 export MB_PORT=${MB_PORT:-61613}
-#export MB_USER=${MB_USER:-guest}
-#export MB_PASS=${MB_PASS:-guest}
+export MB_USER=${MB_USER:-guest}
+export MB_PASS=${MB_PASS:-guest}
 
 # --- koha-sites.conf та koha-common.cnf ---
 envsubst < /docker/templates/koha-sites.conf > /etc/koha/koha-sites.conf
@@ -58,15 +65,15 @@ MB_PARAMS="--mb-host ${MB_HOST} --mb-port ${MB_PORT} --mb-user ${MB_USER} --mb-p
 
 # [KDV] БІЛЬШЕ НЕ СТВОРЮЄМО КОРИСТУВАЧА ТУТ — ЙОГО СТВОРЮЄ koha-create
 # --- Користувач/група інстансу (library-koha) ---
-if ! id "${KOHA_INSTANCE}-koha" >/dev/null 2>&1; then
-  addgroup --system "${KOHA_INSTANCE}-koha" || true
-  adduser --system \
-    --ingroup "${KOHA_INSTANCE}-koha" \
-    --home "/var/lib/koha/${KOHA_INSTANCE}" \
-    --no-create-home \
-    --disabled-login \
-    "${KOHA_INSTANCE}-koha" || true
-fi
+#if ! id "${KOHA_INSTANCE}-koha" >/dev/null 2>&1; then
+#  addgroup --system "${KOHA_INSTANCE}-koha" || true
+#  adduser --system \
+#    --ingroup "${KOHA_INSTANCE}-koha" \
+#    --home "/var/lib/koha/${KOHA_INSTANCE}" \
+#    --no-create-home \
+#    --disabled-login \
+#    "${KOHA_INSTANCE}-koha" || true
+#fi
 
 # --- Elasticsearch параметри для koha-create ---
 ES_PARAMS=""
@@ -75,6 +82,9 @@ if [[ "${USE_ELASTICSEARCH:-false}" = "true" ]]; then
 fi
 
 # --- Створення / оновлення інстансу ---
+# Гарантуємо, що TZ завжди визначений навіть при set -u
+: "${TZ:=${KOHA_TIMEZONE:-Europe/Kyiv}}"
+
 if ! is_instance "${KOHA_INSTANCE}" || [ ! -f "/etc/koha/sites/${KOHA_INSTANCE}/koha-conf.xml" ]; then
   koha-create --timezone "${TZ}" --use-db "${KOHA_INSTANCE}" \
     ${ES_PARAMS} \
@@ -82,6 +92,7 @@ if ! is_instance "${KOHA_INSTANCE}" || [ ! -f "/etc/koha/sites/${KOHA_INSTANCE}/
 else
   koha-create-dirs "${KOHA_INSTANCE}"
 fi
+
 
 # --- Глобальний symlink koha-conf.xml ---
 if [ -f "/etc/koha/sites/${KOHA_INSTANCE}/koha-conf.xml" ]; then
