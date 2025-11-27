@@ -42,11 +42,11 @@ export ZEBRA_MARC_FORMAT=${ZEBRA_MARC_FORMAT:-marc21}
 export KOHA_PLACK_NAME=${KOHA_PLACK_NAME:-koha}
 export KOHA_ES_NAME=${KOHA_ES_NAME:-es}
 
-# RabbitMQ settings
-export MB_HOST=${MB_HOST:-rabbitmq}
-export MB_PORT=${MB_PORT:-61613}
-export MB_USER=${MB_USER:-guest}
-export MB_PASS=${MB_PASS:-guest}
+# RabbitMQ settings (використовуємо значення з docker-compose.yaml або дефолти)
+: "${MB_HOST:=rabbitmq}"
+: "${MB_PORT:=61613}"
+: "${MB_USER:=guest}"
+: "${MB_PASS:=guest}"
 
 # --- koha-sites.conf та koha-common.cnf ---
 envsubst < /docker/templates/koha-sites.conf > /etc/koha/koha-sites.conf
@@ -63,78 +63,21 @@ source /usr/share/koha/bin/koha-functions.sh
 
 MB_PARAMS="--mb-host ${MB_HOST} --mb-port ${MB_PORT} --mb-user ${MB_USER} --mb-pass ${MB_PASS}"
 
-# [KDV] БІЛЬШЕ НЕ СТВОРЮЄМО КОРИСТУВАЧА ТУТ — ЙОГО СТВОРЮЄ koha-create
 # --- Користувач/група інстансу (library-koha) ---
-#if ! id "${KOHA_INSTANCE}-koha" >/dev/null 2>&1; then
-#  addgroup --system "${KOHA_INSTANCE}-koha" || true
-#  adduser --system \
-#    --ingroup "${KOHA_INSTANCE}-koha" \
-#    --home "/var/lib/koha/${KOHA_INSTANCE}" \
-#    --no-create-home \
-#    --disabled-login \
-#    "${KOHA_INSTANCE}-koha" || true
-#fi
+if ! id "${KOHA_INSTANCE}-koha" >/dev/null 2>&1; then
+  addgroup --system "${KOHA_INSTANCE}-koha" || true
+  adduser --system \
+    --ingroup "${KOHA_INSTANCE}-koha" \
+    --home "/var/lib/koha/${KOHA_INSTANCE}" \
+    --no-create-home \
+    --disabled-login \
+    "${KOHA_INSTANCE}-koha" || true
+fi
 
 # --- Elasticsearch параметри для koha-create ---
 ES_PARAMS=""
 if [[ "${USE_ELASTICSEARCH:-false}" = "true" ]]; then
   ES_PARAMS="--elasticsearch-server ${ELASTICSEARCH_HOST}"
-fi
-
-# --- Створення / оновлення інстансу ---
-# Гарантуємо, що TZ завжди визначений навіть при set -u
-: "${TZ:=${KOHA_TIMEZONE:-Europe/Kyiv}}"
-
-if ! is_instance "${KOHA_INSTANCE}" || [ ! -f "/etc/koha/sites/${KOHA_INSTANCE}/koha-conf.xml" ]; then
-  koha-create --timezone "${TZ}" --use-db "${KOHA_INSTANCE}" \
-    ${ES_PARAMS} \
-    --mb-host "${MB_HOST}" --mb-port "${MB_PORT}" --mb-user "${MB_USER}" --mb-pass "${MB_PASS}"
-else
-  koha-create-dirs "${KOHA_INSTANCE}"
-fi
-
-
-# --- Глобальний symlink koha-conf.xml ---
-if [ -f "/etc/koha/sites/${KOHA_INSTANCE}/koha-conf.xml" ]; then
-  ln -sf "/etc/koha/sites/${KOHA_INSTANCE}/koha-conf.xml" /etc/koha/koha-conf.xml
-fi
-
-# --- Права на koha-conf.xml та /etc/koha/sites/$INSTANCE ---
-if [ -d "/etc/koha/sites/${KOHA_INSTANCE}" ]; then
-  chown -R "${KOHA_INSTANCE}-koha:${KOHA_INSTANCE}-koha" "/etc/koha/sites/${KOHA_INSTANCE}"
-  chmod 750 "/etc/koha/sites/${KOHA_INSTANCE}" || true
-  if [ -f "/etc/koha/sites/${KOHA_INSTANCE}/koha-conf.xml" ]; then
-    chmod 640 "/etc/koha/sites/${KOHA_INSTANCE}/koha-conf.xml" || true
-  fi
-fi
-
-
-# Це гарантує, що koha-conf.xml ЗАВЖДИ має пароль з .env,
-# навіть якщо інстанс вже був створений.
-# Гарантує, що koha-conf.xml ЗАВЖДИ має DB_USER/DB_PASS з .env
-# --- АВТОМАТИЧНЕ ВИПРАВЛЕННЯ БАЗИ ДАНИХ (Метод SED) ---
-if [ -f "/etc/koha/sites/${KOHA_INSTANCE}/koha-conf.xml" ]; then
-    echo "Updating Database credentials in koha-conf.xml..."
-    sed -i "s|<user>.*</user>|<user>${MYSQL_USER}</user>|g" "/etc/koha/sites/${KOHA_INSTANCE}/koha-conf.xml"
-    sed -i "s|<pass>.*</pass>|<pass>${MYSQL_PASSWORD}</pass>|g" "/etc/koha/sites/${KOHA_INSTANCE}/koha-conf.xml"
-fi
-
-# --- АВТОМАТИЧНЕ ВИПРАВЛЕННЯ RABBITMQ (Метод SED) ---
-if [ -f "/etc/koha/sites/${KOHA_INSTANCE}/koha-conf.xml" ]; then
-    echo "Updating RabbitMQ credentials in koha-conf.xml..."
-    sed -i "s|<username>.*</username>|<username>${MB_USER}</username>|g" "/etc/koha/sites/${KOHA_INSTANCE}/koha-conf.xml"
-    sed -i "s|<password>.*</password>|<password>${MB_PASS}</password>|g" "/etc/koha/sites/${KOHA_INSTANCE}/koha-conf.xml"
-    sed -i "s|<vhost>.*</vhost>|<vhost>/</vhost>|g" "/etc/koha/sites/${KOHA_INSTANCE}/koha-conf.xml"
-fi
-
-# --- АВТОМАТИЧНЕ ВИПРАВЛЕННЯ PLACK WORKER (Метод SED) ---
-if [ -f "/etc/koha/sites/${KOHA_INSTANCE}/koha-conf.xml" ]; then
-    echo "Disabling Plack queue processing (run_in_plack=0)..."
-    if ! grep -q "<run_in_plack>" "/etc/koha/sites/${KOHA_INSTANCE}/koha-conf.xml"; then
-        sed -i "s|</background_jobs_worker>|    <run_in_plack>0</run_in_plack>\n</background_jobs_worker>|g" "/etc/koha/sites/${KOHA_INSTANCE}/koha-conf.xml"
-    else
-        sed -i "s|<run_in_plack>.*</run_in_plack>|<run_in_plack>0</run_in_plack>|g" "/etc/koha/sites/${KOHA_INSTANCE}/koha-conf.xml"
-    fi
 fi
 
 # --- Файлова система: логи, кеш, спулі, run ---
@@ -172,6 +115,81 @@ chmod 755 /var/log/koha /var/log/koha/apache "/var/log/koha/${KOHA_INSTANCE}" \
           /var/run/koha "/var/run/koha/${KOHA_INSTANCE}"
 chmod -R g+rwX /var/spool/koha /var/cache/koha /var/lib/koha
 chmod g+s "/var/spool/koha/${KOHA_INSTANCE}" || true
+
+# --- Створення / оновлення інстансу ---
+# Гарантуємо, що TZ завжди визначений навіть при set -u
+: "${TZ:=${KOHA_TIMEZONE:-Europe/Kyiv}}"
+
+if ! is_instance "${KOHA_INSTANCE}" || [ ! -f "/etc/koha/sites/${KOHA_INSTANCE}/koha-conf.xml" ]; then
+  echo "DEBUG: About to call koha-create with:"
+  echo "  TZ=${TZ}"
+  echo "  KOHA_INSTANCE=${KOHA_INSTANCE}"
+  echo "  ES_PARAMS=${ES_PARAMS}"
+  echo "  MB_HOST=${MB_HOST}"
+  echo "  MB_PORT=${MB_PORT}"
+  echo "  MB_USER=${MB_USER}"
+  echo "  MB_PASS=${MB_PASS}"
+  koha-create --timezone "${TZ}" --use-db "${KOHA_INSTANCE}" \
+    ${ES_PARAMS:+$ES_PARAMS} \
+    --mb-host "${MB_HOST}" --mb-port "${MB_PORT}" --mb-user "${MB_USER}" --mb-pass "${MB_PASS}"
+else
+  koha-create-dirs "${KOHA_INSTANCE}"
+fi
+
+
+# --- Глобальний symlink koha-conf.xml ---
+if [ -f "/etc/koha/sites/${KOHA_INSTANCE}/koha-conf.xml" ]; then
+  ln -sf "/etc/koha/sites/${KOHA_INSTANCE}/koha-conf.xml" /etc/koha/koha-conf.xml
+fi
+
+# --- Права на koha-conf.xml та /etc/koha/sites/$INSTANCE ---
+if [ -d "/etc/koha/sites/${KOHA_INSTANCE}" ]; then
+  chown -R "${KOHA_INSTANCE}-koha:${KOHA_INSTANCE}-koha" "/etc/koha/sites/${KOHA_INSTANCE}"
+  chmod 750 "/etc/koha/sites/${KOHA_INSTANCE}" || true
+  if [ -f "/etc/koha/sites/${KOHA_INSTANCE}/koha-conf.xml" ]; then
+    chmod 640 "/etc/koha/sites/${KOHA_INSTANCE}/koha-conf.xml" || true
+  fi
+fi
+
+
+# Це гарантує, що koha-conf.xml ЗАВЖДИ має пароль з .env,
+# навіть якщо інстанс вже був створений.
+# Гарантує, що koha-conf.xml ЗАВЖДИ має DB_USER/DB_PASS з .env
+# --- АВТОМАТИЧНЕ ВИПРАВЛЕННЯ БАЗИ ДАНИХ (Метод PERL) ---
+if [ -f "/etc/koha/sites/${KOHA_INSTANCE}/koha-conf.xml" ]; then
+    echo "Updating Database credentials in koha-conf.xml..."
+    
+    # Використовуємо perl для точної заміни в блоці <config>
+    perl -i -pe '
+        BEGIN { $in_config = 0; }
+        $in_config = 1 if /<config>/;
+        if ($in_config) {
+            s|<database>[^<]*</database>|<database>'"${DB_NAME}"'</database>|g;
+            s|<user>[^<]*</user>|<user>'"${MYSQL_USER}"'</user>|g;
+            s|<pass>[^<]*</pass>|<pass>'"${MYSQL_PASSWORD}"'</pass>|g;
+        }
+        $in_config = 0 if /<\/config>/;
+    ' "/etc/koha/sites/${KOHA_INSTANCE}/koha-conf.xml"
+fi
+
+# --- АВТОМАТИЧНЕ ВИПРАВЛЕННЯ RABBITMQ (Метод SED) ---
+if [ -f "/etc/koha/sites/${KOHA_INSTANCE}/koha-conf.xml" ]; then
+    echo "Updating RabbitMQ credentials in koha-conf.xml..."
+    sed -i "s|<username>.*</username>|<username>${MB_USER}</username>|g" "/etc/koha/sites/${KOHA_INSTANCE}/koha-conf.xml"
+    sed -i "s|<password>.*</password>|<password>${MB_PASS}</password>|g" "/etc/koha/sites/${KOHA_INSTANCE}/koha-conf.xml"
+    sed -i "s|<vhost>.*</vhost>|<vhost>/</vhost>|g" "/etc/koha/sites/${KOHA_INSTANCE}/koha-conf.xml"
+fi
+
+# --- АВТОМАТИЧНЕ ВИПРАВЛЕННЯ PLACK WORKER (Метод SED) ---
+if [ -f "/etc/koha/sites/${KOHA_INSTANCE}/koha-conf.xml" ]; then
+    echo "Disabling Plack queue processing (run_in_plack=0)..."
+    if ! grep -q "<run_in_plack>" "/etc/koha/sites/${KOHA_INSTANCE}/koha-conf.xml"; then
+        sed -i "s|</background_jobs_worker>|    <run_in_plack>0</run_in_plack>\n</background_jobs_worker>|g" "/etc/koha/sites/${KOHA_INSTANCE}/koha-conf.xml"
+    else
+        sed -i "s|<run_in_plack>.*</run_in_plack>|<run_in_plack>0</run_in_plack>|g" "/etc/koha/sites/${KOHA_INSTANCE}/koha-conf.xml"
+    fi
+fi
+
 
 # --- Apache: модулі, ServerName, юзер ---
 a2enmod proxy proxy_http headers || true
