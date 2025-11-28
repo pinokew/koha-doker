@@ -2,6 +2,21 @@
 
 set -u
 
+if [ -f /proc/1/environ ]; then
+    while IFS='=' read -r -d '' key value 2>/dev/null || [ -n "$key" ]; do
+        case "$key" in
+            MYSQL_USER|MYSQL_PASSWORD|DB_NAME|MYSQL_SERVER|MB_HOST|MB_PORT|MB_USER|MB_PASS)
+                export "$key"="$value"
+                ;;
+        esac
+    done < /proc/1/environ
+fi
+# --- RabbitMQ credentials (з docker-compose environment) ---
+export MB_HOST="${MB_HOST:-rabbitmq}"
+export MB_PORT="${MB_PORT:-61613}"
+export MB_USER="${MB_USER:-guest}"
+export MB_PASS="${MB_PASS:-guest}"
+
 # --- ПАТЧ KOHA-CREATE: обхід вимог Apache та existing user/group в Docker (KDV) ---
 if [ -x /usr/sbin/koha-create ]; then
   if ! grep -q "mpm_itk check bypassed inside Docker (KDV setup)" /usr/sbin/koha-create; then
@@ -20,11 +35,11 @@ if [ -x /usr/sbin/koha-create ]; then
       || echo "WARNING: koha-create mod_rewrite patch failed, please check manually."
 
     # 4) Обхід фаталів "User ... already exists."
-    perl -0pi -e 's/die "User \$username already exists\.";/echo "WARNING: instance user already exists (Docker KDV), continuing." 1>&2\n        : # skip die/' /usr/sbin/koha-create \
+    sed -i 's/die "User \$username already exists\."/echo "WARNING: instance user already exists (Docker KDV), continuing." 1>\&2/' /usr/sbin/koha-create \
       || echo "WARNING: koha-create user-exists patch failed, please check manually."
-
+    
     # 5) Обхід фаталів "Group ... already exists."
-    perl -0pi -e 's/die "Group \$username already exists\.";/echo "WARNING: instance group already exists (Docker KDV), continuing." 1>&2\n        : # skip die/' /usr/sbin/koha-create \
+    sed -i 's/die "Group \$username already exists\."/echo "WARNING: instance group already exists (Docker KDV), continuing." 1>\&2/' /usr/sbin/koha-create \
       || echo "WARNING: koha-create group-exists patch failed, please check manually."
   fi
 fi
@@ -34,19 +49,22 @@ export KOHA_INSTANCE=${KOHA_INSTANCE:-library}
 export KOHA_INTRANET_PORT=8081
 export KOHA_OPAC_PORT=8080
 export MEMCACHED_SERVERS=${MEMCACHED_SERVERS:-memcached}
-export MYSQL_SERVER=${MYSQL_SERVER:-db}
-export DB_NAME=${DB_NAME:-koha_default}
-export MYSQL_USER=${MYSQL_USER:-koha_default}
-export MYSQL_PASSWORD=${MYSQL_PASSWORD:-$(pwgen -s 15 1)}
+
+# DB змінні беруться з docker-compose.yaml
+# Якщо не визначені — помилка (set -u)
+: "${MYSQL_SERVER:?MYSQL_SERVER not set}"
+: "${DB_NAME:?DB_NAME not set}"
+: "${MYSQL_USER:?MYSQL_USER not set}"
+: "${MYSQL_PASSWORD:?MYSQL_PASSWORD not set}"
+
+export MYSQL_SERVER
+export DB_NAME
+export MYSQL_USER
+export MYSQL_PASSWORD
+
 export ZEBRA_MARC_FORMAT=${ZEBRA_MARC_FORMAT:-marc21}
 export KOHA_PLACK_NAME=${KOHA_PLACK_NAME:-koha}
 export KOHA_ES_NAME=${KOHA_ES_NAME:-es}
-
-# RabbitMQ settings (використовуємо значення з docker-compose.yaml або дефолти)
-: "${MB_HOST:=rabbitmq}"
-: "${MB_PORT:=61613}"
-: "${MB_USER:=guest}"
-: "${MB_PASS:=guest}"
 
 # --- koha-sites.conf та koha-common.cnf ---
 envsubst < /docker/templates/koha-sites.conf > /etc/koha/koha-sites.conf
@@ -55,13 +73,9 @@ rm -f /etc/mysql/koha-common.cnf
 envsubst < /docker/templates/koha-common.cnf > /etc/mysql/koha-common.cnf
 chmod 660 /etc/mysql/koha-common.cnf
 
-# Запис у /etc/koha/passwd
-echo -n "${KOHA_INSTANCE}:${MYSQL_USER}:${MYSQL_PASSWORD}:${DB_NAME}:${MYSQL_SERVER}" > /etc/koha/passwd
 
 # Функції Koha
 source /usr/share/koha/bin/koha-functions.sh
-
-MB_PARAMS="--mb-host ${MB_HOST} --mb-port ${MB_PORT} --mb-user ${MB_USER} --mb-pass ${MB_PASS}"
 
 # --- Користувач/група інстансу (library-koha) ---
 if ! id "${KOHA_INSTANCE}-koha" >/dev/null 2>&1; then
@@ -115,6 +129,16 @@ chmod 755 /var/log/koha /var/log/koha/apache "/var/log/koha/${KOHA_INSTANCE}" \
           /var/run/koha "/var/run/koha/${KOHA_INSTANCE}"
 chmod -R g+rwX /var/spool/koha /var/cache/koha /var/lib/koha
 chmod g+s "/var/spool/koha/${KOHA_INSTANCE}" || true
+
+# DEBUG: перевірка змінних перед записом
+echo "DEBUG: Variables before writing /etc/koha/passwd:"
+echo "  MYSQL_USER=${MYSQL_USER}"
+echo "  MYSQL_PASSWORD=${MYSQL_PASSWORD}"
+echo "  DB_NAME=${DB_NAME}"
+echo "  MYSQL_SERVER=${MYSQL_SERVER}"
+
+# Запис у /etc/koha/passwd
+echo -n "${KOHA_INSTANCE}:${MYSQL_USER}:${MYSQL_PASSWORD}:${DB_NAME}:${MYSQL_SERVER}" > /etc/koha/passwd
 
 # --- Створення / оновлення інстансу ---
 # Гарантуємо, що TZ завжди визначений навіть при set -u
