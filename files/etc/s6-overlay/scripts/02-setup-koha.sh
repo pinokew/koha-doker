@@ -111,20 +111,16 @@ if [[ "${USE_ELASTICSEARCH:-false}" = "true" ]]; then
   ES_PARAMS="--elasticsearch-server ${ELASTICSEARCH_HOST}"
 fi
 
-# --- Логи Apache + Koha ---
-# Створюємо базовий каталог логів + підкаталог для інстансу
-mkdir -p /var/log/koha/apache "/var/log/koha/${KOHA_INSTANCE}" 2>/dev/null || true
-
-# Створюємо файли логів, які згадані у vhost-файлі
+# Логи Apache + Koha
+mkdir -p /var/log/koha/apache "/var/log/koha/${KOHA_INSTANCE}" || true
 touch \
   "/var/log/koha/${KOHA_INSTANCE}/opac-error.log" \
   "/var/log/koha/${KOHA_INSTANCE}/intranet-error.log" \
-  "/var/log/koha/${KOHA_INSTANCE}/plack-error.log" 2>/dev/null || true
+  "/var/log/koha/${KOHA_INSTANCE}/plack-error.log" \
+  "/var/log/koha/${KOHA_INSTANCE}/koha.log" 2>/dev/null || true
 
-# Даємо apache нормальні права
-chown -R www-data:www-data /var/log/koha 2>/dev/null || true
-chmod 750 /var/log/koha "/var/log/koha/${KOHA_INSTANCE}" 2>/dev/null || true
-
+chown -R "${KOHA_INSTANCE}-koha:${KOHA_INSTANCE}-koha" /var/log/koha || true
+chmod -R g+rwX /var/log/koha || true
 
 # Кеш, спулі, дані Koha, run (також ідемпотентно)
 for d in \
@@ -178,6 +174,23 @@ else
   koha-create-dirs "${KOHA_INSTANCE}"
 fi
 
+# --- Якщо koha-conf.xml все ще не існує — генеруємо з шаблону ---
+if [ ! -f "/etc/koha/sites/${KOHA_INSTANCE}/koha-conf.xml" ]; then
+  echo "WARNING: /etc/koha/sites/${KOHA_INSTANCE}/koha-conf.xml missing, generating from template..."
+
+  mkdir -p "/etc/koha/sites/${KOHA_INSTANCE}" 2>/dev/null || true
+
+  if [ -f /docker/templates/koha-conf-site.xml.in ]; then
+    cp /docker/templates/koha-conf-site.xml.in "/etc/koha/sites/${KOHA_INSTANCE}/koha-conf.xml"
+    echo "INFO: koha-conf.xml created from /docker/templates/koha-conf-site.xml.in"
+  elif [ -f /usr/share/koha/etc/koha-conf-site.xml.in ]; then
+    cp /usr/share/koha/etc/koha-conf-site.xml.in "/etc/koha/sites/${KOHA_INSTANCE}/koha-conf.xml"
+    echo "INFO: koha-conf.xml created from /usr/share/koha/etc/koha-conf-site.xml.in"
+  else
+    echo "ERROR: koha-conf-site.xml.in not found in /docker/templates or /usr/share/koha/etc" >&2
+  fi
+fi
+
 # --- Фікс Apache vhost: прибираємо mpm_itk-директиву AssignUserID ---
 for v in \
   "/etc/apache2/sites-available/${KOHA_INSTANCE}.conf" \
@@ -188,6 +201,7 @@ do
     sed -i '/^[[:space:]]*AssignUserID[[:space:]].*$/d' "$v" || true
   fi
 done
+
 
 # Пересвідчуємось, що enabled-vhost посилається на sites-available
 if [ -f "/etc/apache2/sites-available/${KOHA_INSTANCE}.conf" ]; then
@@ -342,6 +356,38 @@ if [ -n "${KOHA_LANGS:-}" ]; then
         "UPDATE systempreferences SET value='$LANGS_CSV' WHERE variable IN ('language', 'opaclanguages');"
   fi
 fi
+
+# --- Патч plack.psgi: koha-conf dir + cache dir ---
+if [ -f "/etc/koha/plack.psgi" ]; then
+  # 1) щоб plack знав, де koha-conf.xml
+  sed -i "s|__KOHA_CONF_DIR__|/etc/koha|g" /etc/koha/plack.psgi
+
+  # 2) щоб Template Toolkit мав нормальний кеш-каталог
+  CACHE_DIR="/var/cache/koha/${KOHA_INSTANCE}/plack-tmpl"
+  mkdir -p "$CACHE_DIR" || true
+  chown "${KOHA_INSTANCE}-koha:${KOHA_INSTANCE}-koha" "$CACHE_DIR" || true
+  chmod 750 "$CACHE_DIR" || true
+
+  sed -i "s|__TEMPLATE_CACHE_DIR__|$CACHE_DIR|g" /etc/koha/plack.psgi
+fi
+
+# --- log4perl.conf: беремо з site-версії або створюємо простий ---
+if [ -f "/etc/koha/sites/${KOHA_INSTANCE}/log4perl.conf" ]; then
+  cp "/etc/koha/sites/${KOHA_INSTANCE}/log4perl.conf" /etc/koha/log4perl.conf
+else
+  cat >/etc/koha/log4perl.conf <<'EOF'
+log4perl.rootLogger = INFO, LOGFILE
+
+log4perl.appender.LOGFILE = Log::Log4perl::Appender::File
+log4perl.appender.LOGFILE.filename = /var/log/koha/library/koha.log
+log4perl.appender.LOGFILE.mode = append
+log4perl.appender.LOGFILE.layout = Log::Log4perl::Layout::PatternLayout
+log4perl.appender.LOGFILE.layout.ConversionPattern = %d [%p] %m%n
+EOF
+fi
+
+chown root:root /etc/koha/log4perl.conf || true
+chmod 644 /etc/koha/log4perl.conf || true
 
 # Повертаємо суворий режим помилок
 set -u

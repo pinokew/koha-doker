@@ -1,5 +1,3 @@
-<!-- Based on Koha 25.05.x default, customized for KDV (date: 2025-11-16). -->
-
 <acsconfig xmlns="http://openncip.org/acs-config/1.0/">
 <!-- above address gets nothing, it's just a namespace -->
   <error-detect enabled="true" />
@@ -12,9 +10,9 @@
   <server-params
     min_servers='1'
     min_spare_servers='0'
-    log_file='Sys::Syslog'
-    syslog_ident='koha_sip'
-    syslog_facility='local6'
+    custom_tcp_keepalive='0'
+    custom_tcp_keepalive_time='7200'
+    custom_tcp_keepalive_intvl='75'
   />
 
   <listeners>
@@ -25,13 +23,13 @@
       protocol="NCIP/1.0" />
 -->
     <service
-      port="8023/tcp"
+      port="127.0.0.1:8023/tcp/IPv4"
       transport="telnet"
       protocol="SIP/2.00"
       timeout="60" />
 
     <service
-      port="127.0.0.1:6001/tcp"
+      port="127.0.0.1:6001/tcp/IPv4"
       transport="RAW"
       protocol="SIP/2.00"
       client_timeout="600"
@@ -45,7 +43,8 @@
 -->
   </listeners>
 
-  <accounts>
+<!-- WARNING: Accounts are now managed in the Staff UI SIP2 module -->
+    <accounts>
       ${SIP_CONF_ACCOUNTS}
   </accounts>
 
@@ -56,6 +55,7 @@ The implementation attribute is actually used to find the code to run,
 in our case "ILS".
 -->
 
+<!-- WARNING: Institutions are now managed in the Staff UI SIP2 module -->
 <institutions>
     ${SIP_CONF_LIBS}
 </institutions>
