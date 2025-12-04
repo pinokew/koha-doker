@@ -45,7 +45,7 @@
 
 <!-- WARNING: Accounts are now managed in the Staff UI SIP2 module -->
     <accounts>
-      ${SIP_CONF_ACCOUNTS}
+      
   </accounts>
 
 <!--
@@ -57,6 +57,6 @@ in our case "ILS".
 
 <!-- WARNING: Institutions are now managed in the Staff UI SIP2 module -->
 <institutions>
-    ${SIP_CONF_LIBS}
+    
 </institutions>
 </acsconfig>

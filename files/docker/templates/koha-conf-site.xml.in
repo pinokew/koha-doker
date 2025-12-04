@@ -1,66 +1,66 @@
 <yazgfs>
 
-<listen id="biblioserver" >unix:/var/run/koha/__KOHASITE__/bibliosocket</listen>
-<listen id="authorityserver" >unix:/var/run/koha/__KOHASITE__/authoritysocket</listen>
+<listen id="biblioserver" >unix:/var/run/koha/library/bibliosocket</listen>
+<listen id="authorityserver" >unix:/var/run/koha/library/authoritysocket</listen>
 
 <!-- Uncomment the following entry if you want to run the public Z39.50 server.
     Also uncomment the <server> and <serverinfo> sections for id 'publicserver'
     under PUBLICSERVER'S BIBLIOGRAPHIC RECORDS title-->
-__START_SRU_PUBLICSERVER__
-<listen id="publicserver" >tcp:@:__SRU_BIBLIOS_PORT__</listen>
-__END_SRU_PUBLICSERVER__
+<!--
+<listen id="publicserver" >tcp:@:9998</listen>
+-->
 
 <!-- BIBLIOGRAPHIC RECORDS -->
 <server id="biblioserver"  listenref="biblioserver">
-    <directory>/var/lib/koha/__KOHASITE__/biblios</directory>
-    <config>/etc/koha/sites/__KOHASITE__/zebra-biblios-dom.cfg</config>
+    <directory>/var/lib/koha/library/biblios</directory>
+    <config>/etc/koha/sites/library/zebra-biblios-dom.cfg</config>
     <cql2rpn>/etc/koha/zebradb/pqf.properties</cql2rpn>
 
-  <xi:include href="/etc/koha/__ZEBRA_MARC_FORMAT__-retrieval-info-bib-dom.xml"
+  <xi:include href="/etc/koha/marc21-retrieval-info-bib-dom.xml"
               xmlns:xi="http://www.w3.org/2001/XInclude">
     <xi:fallback>
       <retrievalinfo>
-       <retrieval syntax="__ZEBRA_MARC_FORMAT__" name="F"/>
-       <retrieval syntax="__ZEBRA_MARC_FORMAT__" name="B"/>
+       <retrieval syntax="marc21" name="F"/>
+       <retrieval syntax="marc21" name="B"/>
        <retrieval syntax="xml" name="F"/>
        <retrieval syntax="xml" name="B"/>
        <retrieval syntax="xml" name="marcxml"
                   identifier="info:srw/schema/1/marcxml-v1.1">
-         <backend syntax="__ZEBRA_MARC_FORMAT__" name="F">
+         <backend syntax="marc21" name="F">
            <marc inputformat="marc" outputformat="marcxml"
                  inputcharset="utf-8"/>
          </backend>
        </retrieval>
        <retrieval syntax="xml" name="dc">
-         <backend syntax="__ZEBRA_MARC_FORMAT__" name="F">
+         <backend syntax="marc21" name="F">
            <marc inputformat="marc" outputformat="marcxml"
                  inputcharset="utf-8"/>
            <xslt stylesheet="/usr/share/koha/intranet/htdocs/intranet-tmpl/prog/en/xslt/MARC21slim2DC.xsl"/>
          </backend>
        </retrieval>
        <retrieval syntax="xml" name="mods">
-         <backend syntax="__ZEBRA_MARC_FORMAT__" name="F">
+         <backend syntax="marc21" name="F">
            <marc inputformat="marc" outputformat="marcxml"
                  inputcharset="utf-8"/>
            <xslt stylesheet="/usr/share/koha/intranet/htdocs/intranet-tmpl/prog/en/xslt/MARC21slim2MODS.xsl"/>
          </backend>
        </retrieval>
        <retrieval syntax="xml" name="rdfdc">
-         <backend syntax="__ZEBRA_MARC_FORMAT__" name="F">
+         <backend syntax="marc21" name="F">
            <marc inputformat="marc" outputformat="marcxml"
                  inputcharset="utf-8"/>
            <xslt stylesheet="/usr/share/koha/intranet/htdocs/intranet-tmpl/prog/en/xslt/MARC21slim2RDFDC.xsl"/>
          </backend>
        </retrieval>
        <retrieval syntax="xml" name="rss2">
-         <backend syntax="__ZEBRA_MARC_FORMAT__" name="F">
+         <backend syntax="marc21" name="F">
            <marc inputformat="marc" outputformat="marcxml"
                  inputcharset="utf-8"/>
            <xslt stylesheet="/usr/share/koha/intranet/htdocs/intranet-tmpl/prog/en/xslt/MARC21slim2RSS2.xsl"/>
          </backend>
        </retrieval>
        <retrieval syntax="xml" name="utils">
-         <backend syntax="__ZEBRA_MARC_FORMAT__" name="F">
+         <backend syntax="marc21" name="F">
            <marc inputformat="marc" outputformat="marcxml"
                  inputcharset="utf-8"/>
            <xslt stylesheet="/usr/share/koha/intranet/htdocs/intranet-tmpl/prog/en/xslt/MARC21slimUtils.xsl"/>
@@ -79,8 +79,8 @@ __END_SRU_PUBLICSERVER__
       <xi:fallback>
       <explain xmlns="http://explain.z3950.org/dtd/2.0/">
           <serverInfo>
-            <host>__ZEBRA_SRU_HOST__</host>
-            <port>__ZEBRA_SRU_BIBLIOS_PORT__</port>
+            <host>localhost</host>
+            <port>9998</port>
             <database>biblios</database>
           </serverInfo>
         </explain>
@@ -90,51 +90,51 @@ __END_SRU_PUBLICSERVER__
 <serverinfo id="biblioserver">
         <ccl2rpn>/etc/koha/zebradb/ccl.properties</ccl2rpn>
         <user>kohauser</user>
-        <password>__ZEBRA_PASS__</password>
+        <password>zebrastripes</password>
 </serverinfo>
 
 <!-- AUTHORITY RECORDS -->
 <server id="authorityserver"  listenref="authorityserver" >
-    <directory>/var/lib/koha/__KOHASITE__/authorities</directory>
-    <config>/etc/koha/sites/__KOHASITE__/zebra-authorities-dom.cfg</config>
+    <directory>/var/lib/koha/library/authorities</directory>
+    <config>/etc/koha/sites/library/zebra-authorities-dom.cfg</config>
     <cql2rpn>/etc/koha/zebradb/pqf.properties</cql2rpn>
 
-  <xi:include href="/etc/koha/__ZEBRA_MARC_FORMAT__-retrieval-info-auth-dom.xml"
+  <xi:include href="/etc/koha/marc21-retrieval-info-auth-dom.xml"
               xmlns:xi="http://www.w3.org/2001/XInclude">
     <xi:fallback>
       <retrievalinfo>
-       <retrieval syntax="__ZEBRA_MARC_FORMAT__" name="F"/>
-       <retrieval syntax="__ZEBRA_MARC_FORMAT__" name="B"/>
+       <retrieval syntax="marc21" name="F"/>
+       <retrieval syntax="marc21" name="B"/>
        <retrieval syntax="xml" name="marcxml"
                   identifier="info:srw/schema/1/marcxml-v1.1">
-         <backend syntax="__ZEBRA_MARC_FORMAT__" name="F">
+         <backend syntax="marc21" name="F">
            <marc inputformat="marc" outputformat="marcxml"
                  inputcharset="utf-8"/>
          </backend>
        </retrieval>
        <retrieval syntax="xml" name="dc">
-         <backend syntax="__ZEBRA_MARC_FORMAT__" name="F">
+         <backend syntax="marc21" name="F">
            <marc inputformat="marc" outputformat="marcxml"
                  inputcharset="utf-8"/>
            <xslt stylesheet="/usr/share/koha/intranet/htdocs/intranet-tmpl/prog/en/xslt/MARC21slim2DC.xsl"/>
          </backend>
        </retrieval>
        <retrieval syntax="xml" name="mods">
-         <backend syntax="__ZEBRA_MARC_FORMAT__" name="F">
+         <backend syntax="marc21" name="F">
            <marc inputformat="marc" outputformat="marcxml"
                  inputcharset="utf-8"/>
            <xslt stylesheet="/usr/share/koha/intranet/htdocs/intranet-tmpl/prog/en/xslt/MARC21slim2MODS.xsl"/>
          </backend>
        </retrieval>
        <retrieval syntax="xml" name="rdfdc">
-         <backend syntax="__ZEBRA_MARC_FORMAT__" name="F">
+         <backend syntax="marc21" name="F">
            <marc inputformat="marc" outputformat="marcxml"
                  inputcharset="utf-8"/>
            <xslt stylesheet="/usr/share/koha/intranet/htdocs/intranet-tmpl/prog/en/xslt/MARC21slim2RDFDC.xsl"/>
          </backend>
        </retrieval>
        <retrieval syntax="xml" name="utils">
-         <backend syntax="__ZEBRA_MARC_FORMAT__" name="F">
+         <backend syntax="marc21" name="F">
            <marc inputformat="marc" outputformat="marcxml"
                  inputcharset="utf-8"/>
            <xslt stylesheet="/usr/share/koha/intranet/htdocs/intranet-tmpl/prog/en/xslt/MARC21slimUtils.xsl"/>
@@ -153,7 +153,7 @@ __END_SRU_PUBLICSERVER__
     <xi:fallback>
       <explain xmlns="http://explain.z3950.org/dtd/2.0/">
           <serverInfo>
-            <host>__ZEBRA_SRU_HOST__</host>
+            <host>localhost</host>
             <port>__ZEBRA_SRU_AUTHORITIES_PORT__</port>
             <database>authorities</database>
           </serverInfo>
@@ -164,62 +164,62 @@ __END_SRU_PUBLICSERVER__
 <serverinfo id="authorityserver">
     <ccl2rpn>/etc/koha/zebradb/ccl.properties</ccl2rpn>
     <user>kohauser</user>
-    <password>__ZEBRA_PASS__</password>
+    <password>zebrastripes</password>
 </serverinfo>
 
 <!-- PUBLICSERVER'S BIBLIOGRAPHIC RECORDS -->
 <!-- This can be used to set up a public Z39.50/SRU server. -->
-__START_SRU_PUBLICSERVER__
+<!--
 <server id="publicserver"  listenref="publicserver">
-    <directory>/var/lib/koha/__KOHASITE__/biblios</directory>
-    <config>/etc/koha/sites/__KOHASITE__/zebra-biblios-dom.cfg</config>
+    <directory>/var/lib/koha/library/biblios</directory>
+    <config>/etc/koha/sites/library/zebra-biblios-dom.cfg</config>
     <cql2rpn>/etc/koha/zebradb/pqf.properties</cql2rpn>
 
-  <xi:include href="/etc/koha/__ZEBRA_MARC_FORMAT__-retrieval-info-bib-dom.xml"
+  <xi:include href="/etc/koha/marc21-retrieval-info-bib-dom.xml"
               xmlns:xi="http://www.w3.org/2001/XInclude">
     <xi:fallback>
       <retrievalinfo>
-       <retrieval syntax="__ZEBRA_MARC_FORMAT__" name="F"/>
-       <retrieval syntax="__ZEBRA_MARC_FORMAT__" name="B"/>
+       <retrieval syntax="marc21" name="F"/>
+       <retrieval syntax="marc21" name="B"/>
        <retrieval syntax="xml" name="F"/>
        <retrieval syntax="xml" name="B"/>
        <retrieval syntax="xml" name="marcxml"
                   identifier="info:srw/schema/1/marcxml-v1.1">
-         <backend syntax="__ZEBRA_MARC_FORMAT__" name="F">
+         <backend syntax="marc21" name="F">
            <marc inputformat="marc" outputformat="marcxml"
                  inputcharset="utf-8"/>
          </backend>
        </retrieval>
        <retrieval syntax="xml" name="dc">
-         <backend syntax="__ZEBRA_MARC_FORMAT__" name="F">
+         <backend syntax="marc21" name="F">
            <marc inputformat="marc" outputformat="marcxml"
                  inputcharset="utf-8"/>
            <xslt stylesheet="/usr/share/koha/intranet/htdocs/intranet-tmpl/prog/en/xslt/MARC21slim2DC.xsl"/>
          </backend>
        </retrieval>
        <retrieval syntax="xml" name="mods">
-         <backend syntax="__ZEBRA_MARC_FORMAT__" name="F">
+         <backend syntax="marc21" name="F">
            <marc inputformat="marc" outputformat="marcxml"
                  inputcharset="utf-8"/>
            <xslt stylesheet="/usr/share/koha/intranet/htdocs/intranet-tmpl/prog/en/xslt/MARC21slim2MODS.xsl"/>
          </backend>
        </retrieval>
        <retrieval syntax="xml" name="rdfdc">
-         <backend syntax="__ZEBRA_MARC_FORMAT__" name="F">
+         <backend syntax="marc21" name="F">
            <marc inputformat="marc" outputformat="marcxml"
                  inputcharset="utf-8"/>
            <xslt stylesheet="/usr/share/koha/intranet/htdocs/intranet-tmpl/prog/en/xslt/MARC21slim2RDFDC.xsl"/>
          </backend>
        </retrieval>
        <retrieval syntax="xml" name="rss2">
-         <backend syntax="__ZEBRA_MARC_FORMAT__" name="F">
+         <backend syntax="marc21" name="F">
            <marc inputformat="marc" outputformat="marcxml"
                  inputcharset="utf-8"/>
            <xslt stylesheet="/usr/share/koha/intranet/htdocs/intranet-tmpl/prog/en/xslt/MARC21slim2RSS2.xsl"/>
          </backend>
        </retrieval>
        <retrieval syntax="xml" name="utils">
-         <backend syntax="__ZEBRA_MARC_FORMAT__" name="F">
+         <backend syntax="marc21" name="F">
            <marc inputformat="marc" outputformat="marcxml"
                  inputcharset="utf-8"/>
            <xslt stylesheet="/usr/share/koha/intranet/htdocs/intranet-tmpl/prog/en/xslt/MARC21slimUtils.xsl"/>
@@ -234,8 +234,8 @@ __START_SRU_PUBLICSERVER__
       <xi:fallback>
       <explain xmlns="http://explain.z3950.org/dtd/2.0/">
           <serverInfo>
-            <host>__ZEBRA_SRU_HOST__</host>
-            <port>__ZEBRA_SRU_BIBLIOS_PORT__</port>
+            <host>localhost</host>
+            <port>9998</port>
             <database>biblios</database>
           </serverInfo>
         </explain>
@@ -245,37 +245,37 @@ __START_SRU_PUBLICSERVER__
 <serverinfo id="publicserver">
         <ccl2rpn>/etc/koha/zebradb/ccl.properties</ccl2rpn>
         <user>kohauser</user>
-        <password>__ZEBRA_PASS__</password>
+        <password>zebrastripes</password>
 </serverinfo>
-__END_SRU_PUBLICSERVER__
+-->
 
 <config>
  <db_scheme>mysql</db_scheme>
- <database>__DB_NAME__</database>
- <hostname>__DB_HOST__</hostname>
+ <database>koha_library</database>
+ <hostname>db</hostname>
  <port>3306</port>
- <user>__DB_USER__</user>
- <pass>__DB_PASS__</pass>
- <tls>__DB_USE_TLS__</tls>
- <ca>__DB_TLS_CA_CERTIFICATE__</ca>
- <cert>__DB_TLS_CLIENT_CERTIFICATE__</cert>
- <key>__DB_TLS_CLIENT_KEY__</key>
+ <user>koha_db</user>
+ <pass>dbpass1234</pass>
+ <tls>0</tls>
+ <ca></ca>
+ <cert></cert>
+ <key></key>
  <biblioserver>biblios</biblioserver>
  <biblioservershadow>1</biblioservershadow>
  <authorityserver>authorities</authorityserver>
  <authorityservershadow>1</authorityservershadow>
- <pluginsdir>__PLUGINS_DIR__</pluginsdir> <!-- This entry can be repeated to use multiple directories -->
- <enable_plugins>0</enable_plugins>
- <upload_path>__UPLOAD_PATH__</upload_path>
- <tmp_path>__TMP_PATH__</tmp_path>
+ <pluginsdir>/var/lib/koha/library/plugins</pluginsdir> <!-- This entry can be repeated to use multiple directories -->
+ <enable_plugins>1</enable_plugins>
+ <upload_path>/var/lib/koha/library/uploads</upload_path>
+ <tmp_path>/tmp</tmp_path>
  <intranetdir>/usr/share/koha/intranet/cgi-bin</intranetdir>
  <opacdir>/usr/share/koha/opac/cgi-bin/opac</opacdir>
  <opachtdocs>/usr/share/koha/opac/htdocs/opac-tmpl</opachtdocs>
  <intrahtdocs>/usr/share/koha/intranet/htdocs/intranet-tmpl</intrahtdocs>
  <includes>/usr/share/koha/intranet/htdocs/intranet-tmpl/prog/en/includes/</includes>
- <logdir>__LOG_DIR__</logdir>
+ <logdir>/var/log/koha/library</logdir>
  <docdir>/usr/share/doc/koha-common</docdir>
- <backupdir>/var/spool/koha/__KOHASITE__</backupdir>
+ <backupdir>/var/spool/koha/library</backupdir>
  <!-- URL of the mana KB server -->
  <!-- alternative value http://mana-test.koha-community.org to query the test server -->
  <mana_config>https://mana-kb.koha-community.org</mana_config>
@@ -287,23 +287,23 @@ __END_SRU_PUBLICSERVER__
  <install_log>/usr/share/koha/misc/koha-install-log</install_log>
  <useldapserver>0</useldapserver><!-- see C4::Auth_with_ldap for extra configs you must add if you want to turn this on -->
  <useshibboleth>0</useshibboleth><!-- see C4::Auth_with_shibboleth for extra configs you must do to turn this on -->
- <zebra_lockdir>/var/lock/koha/__KOHASITE__</zebra_lockdir>
- <lockdir>/var/lock/koha/__KOHASITE__</lockdir>
+ <zebra_lockdir>/var/lock/koha/library</zebra_lockdir>
+ <lockdir>/var/lock/koha/library</lockdir>
  <use_zebra_facets>1</use_zebra_facets>
  <zebra_max_record_size>1024</zebra_max_record_size>
  <zebra_connection_timeout>30</zebra_connection_timeout>
- <log4perl_conf>__KOHA_CONF_DIR__/log4perl.conf</log4perl_conf>
+ <log4perl_conf>/etc/koha/log4perl.conf</log4perl_conf>
  <!-- Uncomment/edit next setting if you want to adjust zebra log levels.
       Default is: none,fatal,warn.
       You can also include: debug,log,malloc,all,request.
       Use a comma-separated list of levels to include. -->
  <!-- <zebra_loglevels>none,fatal,warn</zebra_loglevels> -->
- <memcached_servers>__MEMCACHED_SERVERS__</memcached_servers>
- <memcached_namespace>__MEMCACHED_NAMESPACE__</memcached_namespace>
- <template_cache_dir>__TEMPLATE_CACHE_DIR__</template_cache_dir>
+ <memcached_servers>memcached:11211</memcached_servers>
+ <memcached_namespace>library</memcached_namespace>
+ <template_cache_dir>/var/cache/koha/library/templates</template_cache_dir>
 
  <!-- Secret passphrase used by Mojolicious for signed cookies -->
- <api_secret_passphrase>__API_SECRET__</api_secret_passphrase>
+ <api_secret_passphrase>pGK2mIP6ri5K2u5nD1kOIw</api_secret_passphrase>
 
  <!-- default report results limit is 999,999. uncomment this and set a different number to override that limit.
  <report_results_limit>999999</report_results_limit>
@@ -334,7 +334,7 @@ __END_SRU_PUBLICSERVER__
  </ttf>
 
  <!-- Path to the config file for SMS::Send -->
- <sms_send_config>__KOHA_CONF_DIR__/sms_send/</sms_send_config>
+ <sms_send_config>/etc/koha/sms_send/</sms_send_config>
 
  <!-- Configuration for Plack -->
  <plack_max_requests>50</plack_max_requests>
@@ -342,13 +342,13 @@ __END_SRU_PUBLICSERVER__
 
  <!-- Configuration for X-Forwarded-For -->
  <!--
- <koha_trusted_proxies>1.2.3.4 2.3.4.5 3.4.5.6</koha_trusted_proxies>
+ <koha_trusted_proxies>127.0.0.1 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16</koha_trusted_proxies>
  -->
 
  <!-- Elasticsearch Configuration -->
  <elasticsearch>
-     <server>__ELASTICSEARCH_SERVER__</server> <!-- may be repeated to include all servers on your cluster -->
-     <index_name>koha___KOHASITE__</index_name> <!-- should be unique amongst all the indices on your cluster. _biblios and _authorities will be appended. -->
+     <server>es:9200</server> <!-- may be repeated to include all servers on your cluster -->
+     <index_name>koha_library</index_name> <!-- should be unique amongst all the indices on your cluster. _biblios and _authorities will be appended. -->
 
      <!-- If you are using authentication, you will also need to use HTTPS. Uncomment and tweak the following for your ES setup. -->
      <!-- NOTE: instead of userinfo, you can alternatively provide the username and password in URL in the server element -->
@@ -363,15 +363,15 @@ __END_SRU_PUBLICSERVER__
      <!-- <trace_to>Stderr</trace_to> -->
  </elasticsearch>
  <!-- Uncomment the following line if you want to override the Elasticsearch default index settings -->
- <!-- <elasticsearch_index_config>__KOHA_CONF_DIR__/searchengine/elasticsearch/index_config.yaml</elasticsearch_index_config> -->
+ <!-- <elasticsearch_index_config>/etc/koha/searchengine/elasticsearch/index_config.yaml</elasticsearch_index_config> -->
  <!-- Uncomment the following line if you want to override the Elasticsearch default field settings -->
- <!-- <elasticsearch_field_config>__KOHA_CONF_DIR__/searchengine/elasticsearch/field_config.yaml</elasticsearch_field_config> -->
+ <!-- <elasticsearch_field_config>/etc/koha/searchengine/elasticsearch/field_config.yaml</elasticsearch_field_config> -->
  <!-- Uncomment the following line if you want to override the Elasticsearch index default settings.
       Note that any changes made to the mappings file only take effect if you reset the mappings in
       by visiting /cgi-bin/koha/admin/searchengine/elasticsearch/mappings.pl?op=reset&i_know_what_i_am_doing=1&reset_fields=1.
       Resetting mappings will override any changes made in the Search engine configuration UI.
  -->
- <!-- <elasticsearch_index_mappings>__KOHA_CONF_DIR__/searchengine/elasticsearch/mappings.yaml</elasticsearch_index_mappings> -->
+ <!-- <elasticsearch_index_mappings>/etc/koha/searchengine/elasticsearch/mappings.yaml</elasticsearch_index_mappings> -->
  <!-- How many indexing tasks the ES indexer will pick at a time
       If the site is so busy the queue keeps growing, raise it -->
  <es_indexer_batch_size>10</es_indexer_batch_size>
@@ -404,13 +404,13 @@ __END_SRU_PUBLICSERVER__
  <!-- The timezone setting can let you force the timezone for this
       instance to be something other then the local timezone of the
       server. e.g. Antarctica/South_Pole -->
- <timezone>__TIMEZONE__</timezone>
+ <timezone>Europe/Kyiv</timezone>
 
  <!-- This is the bcrypt settings used to generated anonymized content -->
- <bcrypt_settings>__BCRYPT_SETTINGS__</bcrypt_settings>
+ <bcrypt_settings>pGK2mIP6ri5K2u5nD1kOIw</bcrypt_settings>
 
  <!-- Encryption key for crypted password or sensitive data -->
- <encryption_key>__ENCRYPTION_KEY__</encryption_key>
+ <encryption_key>pGK2mIP6ri5K2u5nD1kOIw</encryption_key>
 
  <!-- flags for development purposes
       git_install is used to adjust some paths specific to git installations (fka dev_install)
@@ -422,7 +422,7 @@ __END_SRU_PUBLICSERVER__
       developers use it to catch bugs related to strict SQL modes -->
  <strict_sql_modes>0</strict_sql_modes>
 
- <plugins_restricted>1</plugins_restricted>
+ <plugins_restricted>0</plugins_restricted>
  <plugins_restart>1</plugins_restart>
  <plugin_repos>
     <!--
@@ -458,21 +458,21 @@ __END_SRU_PUBLICSERVER__
  </koha_xslt_security>
 
  <smtp_server>
-    <host>__SMTP_HOST__</host>
-    <port>__SMTP_PORT__</port>
-    <timeout>__SMTP_TIMEOUT__</timeout>
-    <ssl_mode>__SMTP_SSL_MODE__</ssl_mode>
-    <user_name>__SMTP_USER_NAME__</user_name>
-    <password>__SMTP_PASSWORD__</password>
-    <debug>__SMTP_DEBUG__</debug>
+    <host>localhost</host>
+    <port>25</port>
+    <timeout>60</timeout>
+    <ssl_mode>disabled</ssl_mode>
+    <user_name></user_name>
+    <password></password>
+    <debug>0</debug>
  </smtp_server>
 
  <message_broker>
-   <hostname>__MESSAGE_BROKER_HOST__</hostname>
-   <port>__MESSAGE_BROKER_PORT__</port>
-   <username>__MESSAGE_BROKER_USER__</username>
-   <password>__MESSAGE_BROKER_PASS__</password>
-   <vhost>__MESSAGE_BROKER_VHOST__</vhost>
+   <hostname>rabbitmq</hostname>
+   <port>61613</port>
+   <username>koha_mq</username>
+   <password>rabbitmqpass1234</password>
+   <vhost>/</vhost>
  </message_broker>
 
  <background_jobs_worker>
@@ -480,7 +480,7 @@ __END_SRU_PUBLICSERVER__
      <max_processes>1</max_processes>
  </background_jobs_worker>
 
- <do_not_remove_cookie>__KEEP_COOKIE__</do_not_remove_cookie>
+ <do_not_remove_cookie>koha_cookie</do_not_remove_cookie>
  <!-- Example lines. See Koha/CookieManager.pm for more details.
      <do_not_remove_cookie>some_cookie</do_not_remove_cookie>
      <remove_cookie>another_cookie</remove_cookie>
