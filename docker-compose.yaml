@@ -140,6 +140,19 @@ services:
     networks:
       - koha
     restart: always
+  
+  tunnel:
+    image: ngrok/ngrok:latest
+    container_name: koha_tunnel
+    restart: unless-stopped
+    networks:
+      - kohanet
+    command: http koha:8081
+    environment:
+      - NGROK_AUTHTOKEN=36RR418k1II85SOCpEWSyoUiWD7_5JQ68K8E2q374GubWuCUb
+    depends_on:
+      koha:
+        condition: service_healthy
 
 volumes:
   mariadb-koha:
