@@ -2,7 +2,7 @@ services:
   koha:
     container_name: koha-app
     build:
-      context: ..
+      context: .
       dockerfile: Dockerfile
       args:
         # Передаємо лише номер версії (напр., 25.05) у Dockerfile
@@ -67,10 +67,11 @@ services:
       - koha_config:/etc/koha/sites
       # А тут — дані інстансу (індекси, файли тощо)
       - koha_data:/var/lib/koha
+      - koha_logs:/var/log/koha
 
   rabbitmq:
     container_name: koha-rabbitmq
-    build: ../rabbitmq  
+    build: ./rabbitmq  
     image: koha-local-rabbitmq 
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
@@ -107,7 +108,7 @@ services:
   es:
     container_name: koha-es
     build:
-      context: ..
+      context: .
       dockerfile: elasticsearch/Dockerfile
     image: my-local-es:8.19.6
     environment:
@@ -138,7 +139,9 @@ volumes:
   mariadb-koha:
   koha_config:
   koha_data:
+  koha_logs:
   es-data:
+  
 
 networks:
   koha:
