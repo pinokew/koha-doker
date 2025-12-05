@@ -56,12 +56,9 @@ We separated configuration logic to ensure stability:
 ### Step 1: Clone the Repository
 
 ```
-git clone [https://github.com/YOUR_USERNAME/YOUR_REPO.git](https://github.com/YOUR_USERNAME/YOUR_REPO.git)
-cd YOUR_REPO/examples
+git clone https://github.com/pinokew/koha-doker.git
 
 ```
-
-*(Note: The main `docker-compose.yaml` and configuration files are located in the `examples` directory).*
 
 ### Step 2: Environment Setup
 
