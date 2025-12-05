@@ -149,7 +149,7 @@ services:
       - kohanet
     command: http koha:8081
     environment:
-      - NGROK_AUTHTOKEN=36RR418k1II85SOCpEWSyoUiWD7_5JQ68K8E2q374GubWuCUb
+      - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN}
     depends_on:
       koha:
         condition: service_healthy
