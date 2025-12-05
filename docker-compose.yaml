@@ -68,6 +68,12 @@ services:
       # А тут — дані інстансу (індекси, файли тощо)
       - koha_data:/var/lib/koha
       - koha_logs:/var/log/koha
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8081 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
 
   rabbitmq:
     container_name: koha-rabbitmq
@@ -134,6 +140,20 @@ services:
     networks:
       - koha
     restart: always
+
+  tunnel:
+    image: ngrok/ngrok:latest
+    container_name: koha_tunnel
+    restart: unless-stopped
+    # 👇 ВАЖЛИВО: Ми повертаємо мережу, щоб він бачив 'koha'
+    networks:
+      - kohanet
+    command: http koha:8081
+    environment:
+      - NGROK_AUTHTOKEN=ТВІЙ_ТОКЕН_ТУТ
+    depends_on:
+      koha:
+        condition: service_healthy
 
 volumes:
   mariadb-koha:

@@ -43,7 +43,6 @@
 -->
   </listeners>
 
-<!-- WARNING: Accounts are now managed in the Staff UI SIP2 module -->
     <accounts>
       
   </accounts>
@@ -55,7 +54,6 @@ The implementation attribute is actually used to find the code to run,
 in our case "ILS".
 -->
 
-<!-- WARNING: Institutions are now managed in the Staff UI SIP2 module -->
 <institutions>
     
 </institutions>
