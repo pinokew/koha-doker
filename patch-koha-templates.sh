@@ -49,14 +49,6 @@ export MYSQL_PASSWORD="${MYSQL_PASSWORD:-${DB_PASS:-password}}"
 export DB_NAME="${DB_NAME:-koha_library}"
 export DB_ROOT_PASS="${DB_ROOT_PASS:-password}"
 
-# Шляхи
-OFFICIAL_DIR="/home/pinokew/koha-official/debian/templates"
-TARGET_DIR="/home/pinokew/koha-doker/files/docker/templates"
-
-echo "Using OFFICIAL_DIR = $OFFICIAL_DIR"
-echo "Using TARGET_DIR   = $TARGET_DIR"
-mkdir -p "$TARGET_DIR"
-
 # --- 1. koha-common.cnf ---
 echo "=== 1) Generating koha-common.cnf ==="
 cat > "$TARGET_DIR/koha-common.cnf" << EOF

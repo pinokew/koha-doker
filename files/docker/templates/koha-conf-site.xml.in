@@ -303,7 +303,7 @@
  <template_cache_dir>/var/cache/koha/library/templates</template_cache_dir>
 
  <!-- Secret passphrase used by Mojolicious for signed cookies -->
- <api_secret_passphrase>k8ZNNynxqVioAmYdEjtgQ</api_secret_passphrase>
+ <api_secret_passphrase>xsom6FIetzS7J8gMk0VzCA</api_secret_passphrase>
 
  <!-- default report results limit is 999,999. uncomment this and set a different number to override that limit.
  <report_results_limit>999999</report_results_limit>
@@ -404,10 +404,10 @@
  <timezone>Europe/Kyiv</timezone>
 
  <!-- This is the bcrypt settings used to generated anonymized content -->
- <bcrypt_settings>k8ZNNynxqVioAmYdEjtgQ</bcrypt_settings>
+ <bcrypt_settings>xsom6FIetzS7J8gMk0VzCA</bcrypt_settings>
 
  <!-- Encryption key for crypted password or sensitive data -->
- <encryption_key>k8ZNNynxqVioAmYdEjtgQ</encryption_key>
+ <encryption_key>xsom6FIetzS7J8gMk0VzCA</encryption_key>
 
  <!-- flag for development purposes
       dev_install is used to adjust some paths specific to dev installations
