@@ -63,11 +63,9 @@ services:
         condition: service_healthy
     restart: always
     volumes:
-      # Тут зберігатиметься конфіг/сайти Koha
-      - koha_config:/etc/koha/sites
-      # А тут — дані інстансу (індекси, файли тощо)
-      - koha_data:/var/lib/koha
-      - koha_logs:/var/log/koha
+      - ${VOL_KOHA_CONF}:/etc/koha/sites
+      - ${VOL_KOHA_DATA}:/var/lib/koha
+      - ${VOL_KOHA_LOGS}:/var/log/koha
     healthcheck:
       test: ["CMD-SHELL", "wget -q --spider http://localhost:8081 || exit 1"]
       interval: 30s
@@ -93,7 +91,7 @@ services:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
     volumes:
-      - mariadb-koha:/var/lib/mysql
+      - ${VOL_DB_PATH}:/var/lib/mysql
     environment:
       MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASS}
       MARIADB_DATABASE: ${DB_NAME}
@@ -132,7 +130,7 @@ services:
       retries: 5
       start_period: 120s
     volumes:
-      - es-data:/usr/share/elasticsearch/data
+      - ${VOL_ES_PATH}:/usr/share/elasticsearch/data
 
   memcached:
     container_name: koha-memcached   
@@ -153,15 +151,7 @@ services:
   #  depends_on:
   #    koha:
   #      condition: service_healthy
-
-volumes:
-  mariadb-koha:
-  koha_config:
-  koha_data:
-  koha_logs:
-  es-data:
-  
-
+ 
 networks:
   kohanet:
     driver: bridge
