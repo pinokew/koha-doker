@@ -9,3 +9,5 @@ koha_data_backup.sql
 rabbitmq_plugins
 files/docker/templates
 archive/
+NEW_CHAT_START_HERE.md
+README.example.md

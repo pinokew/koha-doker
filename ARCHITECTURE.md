@@ -1,76 +1,112 @@
 # Build Repo Architecture (Koha Image)
 
-Дата: 2026-02-27
+Дата: 2026-03-03
+Репозиторій: `koha-docker-build`
 
-## 1) Призначення build-репо
+## 1) Призначення
 
-Цей репозиторій відповідає за складання, перевірку і публікацію Docker-образу Koha.
-Він не відповідає за продакшн-деплой середовища.
+Цей репозиторій відповідає за:
+- складання Docker-образу `pinokew/koha`;
+- runtime bootstrap логіку всередині контейнера;
+- CI quality/security gates;
+- публікацію образу в Docker Hub.
+
+Цей репозиторій **не** відповідає за продакшн-оркестрацію середовища (compose/infra) та runtime-секрети конкретного оточення.
 
 ## 2) Межі відповідальності
 
-1. Build-репо:
-- `Dockerfile`, runtime bootstrap, патчі старту Koha;
-- smoke/health перевірки образу;
-- публікація `pinokew/koha` в Docker Hub.
-2. Не входить у build-репо:
-- оркестрація prod-середовища;
-- інфраструктурні політики конкретного оточення;
-- секрети/токени середовища.
+1. Входить у build-repo:
+- `Dockerfile` і все, що копіюється в image (`files/`, `scripts/koha-setup/`);
+- CI workflow `.github/workflows/build-and-push.yml`;
+- локальні policy-скрипти (`scripts/check-*.sh`);
+- документація image-рівня (`README.md`, `ARCHITECTURE.md`, changelog томи).
 
-## 3) Структура репозиторію
+2. Не входить у build-repo:
+- production `docker-compose`/Helm/K8s конфіг середовища;
+- секрети, ключі, токени, env-файли реального оточення;
+- клієнтські/інфраструктурні runbook-и експлуатації.
+
+## 3) Поточна структура репозиторію
 
 ```text
 koha-docker-build/
+  .github/workflows/build-and-push.yml
   Dockerfile
-  files/                          # runtime-файли, що копіюються в image
-  scripts/koha-setup/             # setup pipeline всередині контейнера
-  scripts/check-internal-ports-policy.sh # перевірка портів
-  scripts/check-secrets-hygiene.sh       # перевірка гігієни секретів
-  docker/pinokew/ports.conf       # сумісний apache ports fix
-   .env.example                    # мінімальний env для build/smoke
+  files/                           # runtime-конфіги в image
+  scripts/koha-setup/              # setup pipeline (s6 steps)
+  scripts/check-secrets-hygiene.sh
+  scripts/check-internal-ports-policy.sh
+  docker/pinokew/ports.conf
+  .gitleaks.toml
+  .trivyignore
   README.md
-  CHANGELOG.md
+  ARCHITECTURE.md
+  CHANGELOG.md                     # індекс changelog-томів
+  CHANGELOGS/                      # детальні changelog томи
 ```
 
-## 4) Правильний життєвий цикл образу
+## 4) CI/CD пайплайн (актуально)
 
-1. Змінити код/конфіги в `Dockerfile`, `files/`, `scripts/koha-setup/`.
-2. Локально перевірити запуск через `docker-compose.yaml`.
-3. Переконатися, що `koha` піднімається і `healthcheck` зелений.
-4. Зібрати й опублікувати образ у Docker Hub.
-5. Зафіксувати changelog і релізні дані (tag + digest).
+Workflow: `.github/workflows/build-and-push.yml`
 
-## 5) Мінімальні quality gates перед публікацією
+1. `ci-checks`:
+- `Gitleaks` (кастомний `.gitleaks.toml` якщо існує);
+- `Hadolint` (через Docker Hub image);
+- `Shellcheck` (через Docker Hub image);
+- локальні policy-скрипти:
+  - `check-secrets-hygiene.sh`
+  - `check-internal-ports-policy.sh`
+- `Trivy config` (HIGH/CRITICAL, з `.trivyignore`).
 
-1. `docker compose config` валідний.
-2. `koha`, `db`, `rabbitmq`, `es` переходять у `healthy` (або очікуваний `running` для `memcached`).
-3. HTTP перевірки Koha (`8080`, `8081`) дають успіх.
-4. Всередині контейнера коректний `KOHA_CONF` і валідний `ports.conf`.
+2. `build-and-publish` (тільки `main`, тільки owner-repo):
+- build scan-image (`local/koha-scan:<sha>`);
+- `Trivy image` scan;
+- build + push `pinokew/koha` tags (`25.05`, `latest`, `sha-...`);
+- Docker Hub description update;
+- SBOM artifact (SPDX JSON);
+- provenance attestation.
 
-## 6) Контракт артефакту для deploy-репо
+## 5) Runtime bootstrap контракт
 
-Після кожного релізу build-репо має віддати в deploy-репо:
+1. Entry point: `/init` (s6-overlay).
+2. Setup runner: `scripts/koha-setup/00-runner.sh`.
+3. Критично required step: `06-koha-create.sh`.
+4. Idempotency правило:
+- якщо `${KOHA_CONF}` уже існує і не порожній, `06-koha-create.sh` пропускає `koha-create`;
+- це захищає live-конфіг від перезапису при restart/recreate.
 
-1. Image tag (`pinokew/koha:<version>`).
-2. Незмінний digest (`pinokew/koha@sha256:...`).
-3. Короткий release note: що змінилось у runtime bootstrap/сумісності.
+## 6) Security/Policy контракт
 
-## 7) SSOT і ENV-політика в build-репо
+1. Секрети:
+- `.env` не трекається git;
+- key/cert-like файли не повинні комітитись;
+- Docker build contexts мають `.dockerignore` правила для `.env`.
 
-1. Шаблон змінних для локального запуску: `.env.example`.
-2. У скриптах/конфігах не хардкодити домени, порти, інстанс, паролі.
-3. Runtime-поведінка має визначатись через ENV.
-4. Секрети не комітити.
+2. Порти:
+- політика перевіряється `check-internal-ports-policy.sh`;
+- для режиму без compose перевіряються `Dockerfile EXPOSE`, `docker/pinokew/ports.conf`, Apache vhost.
 
-## 8) Що не треба додавати у build-репо
+3. Trivy:
+- `DS-0002`/`DS-0029` винесені в `.trivyignore` (поточний root-based bootstrap дизайн);
+- для image scan явно задані DB repositories (`ghcr.io/...`) для стабільного завантаження БД.
 
-1. Продакшн-специфічні `docker-compose` для клієнтських середовищ.
-2. Важкі операційні сценарії експлуатації (runbook/ops для конкретного продакшну).
-3. Бекапи, ключі, токени, приватні env-файли.
+## 7) Контракт артефакту для deploy-repo
 
-## 9) Зв'язок з deploy-репо
+Після релізу build-repo має віддати в deploy-repo:
+- `pinokew/koha:<version>`;
+- immutable digest `pinokew/koha@sha256:...`;
+- короткий release note: що змінилось у runtime/CI/security.
 
-1. Build-репо публікує образ.
-2. Deploy-репо оновлює тільки reference на tag/digest.
-3. Rollback у deploy-репо робиться поверненням попереднього digest.
+Rollback у deploy-repo виконується поверненням попереднього digest.
+
+## 8) Changelog модель
+
+1. `CHANGELOG.md` — короткий індекс томів + статус активного.
+2. Деталі змін — у `CHANGELOGS/CHANGELOG_<YEAR>_VOL_<NN>.md`.
+3. При досягненні soft limit (~300 рядків) створюється новий том.
+
+## 9) Що не додаємо в build-repo
+
+- production-специфічні compose/infra конфіги;
+- приватні env/backup/key матеріали;
+- workaround-и, що живуть лише всередині контейнера без фіксації в source.
