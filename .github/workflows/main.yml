@@ -3,7 +3,6 @@ name: App Pipeline
 on:
   push:
     branches: [ dev, main ]
-    tags: [ 'v*.*.*' ]
     paths-ignore:
       - '**/*.md'
       - '.env.example'
@@ -32,27 +31,43 @@ jobs:
     uses: mzhk-repo/shared-workflows/.github/workflows/shared-ci-cd.yml@main
     with:
       environment_name: development
-      deploy: false
+      deploy: ${{ github.event_name == 'push' && github.ref == 'refs/heads/dev' }}
       use_ansible: false
       build_and_push_docker: true
-      push_docker_image: ${{ github.event_name == 'push' && github.ref == 'refs/heads/dev' }}
       docker_image_name: koha-docker-build
       orchestration_script_path: 'scripts/deploy-orchestrator.sh'
-    secrets: inherit
+    secrets:
+      TS_OAUTH_CLIENT_ID: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+      TS_OAUTH_SECRET: ${{ secrets.TS_OAUTH_SECRET }}
+      SERVER_HOST: ${{ secrets.SERVER_HOST }}
+      SERVER_USER: ${{ secrets.SERVER_USER }}
+      SERVER_SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
+      SSH_HOST_KEY_PUB: ${{ secrets.SSH_HOST_KEY_PUB }}
+      DEPLOY_PROJECT_DIR: ${{ secrets.DEPLOY_PROJECT_DIR }}
+      GHCR_PULL_USERNAME: ${{ secrets.GHCR_PULL_USERNAME }}
+      GHCR_PULL_TOKEN: ${{ secrets.GHCR_PULL_TOKEN }}
 
   deploy-prod:
     if: |
       (github.event_name == 'pull_request' && github.base_ref == 'main') ||
       (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
-      (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) ||
       (github.event_name == 'release' && startsWith(github.event.release.tag_name, 'v'))
     uses: mzhk-repo/shared-workflows/.github/workflows/shared-ci-cd.yml@main
     with:
       environment_name: production
-      deploy: false
+      deploy: ${{ github.event_name == 'release' && startsWith(github.event.release.tag_name, 'v') }}
       use_ansible: false
       build_and_push_docker: true
-      push_docker_image: ${{ (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) || (github.event_name == 'release' && startsWith(github.event.release.tag_name, 'v')) }}
+      push_docker_image: ${{ github.event_name == 'release' && startsWith(github.event.release.tag_name, 'v') }}
       docker_image_name: koha-docker-build
       orchestration_script_path: 'scripts/deploy-orchestrator.sh'
-    secrets: inherit
+    secrets:
+      TS_OAUTH_CLIENT_ID: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+      TS_OAUTH_SECRET: ${{ secrets.TS_OAUTH_SECRET }}
+      SERVER_HOST: ${{ secrets.SERVER_HOST }}
+      SERVER_USER: ${{ secrets.SERVER_USER }}
+      SERVER_SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
+      SSH_HOST_KEY_PUB: ${{ secrets.SSH_HOST_KEY_PUB }}
+      DEPLOY_PROJECT_DIR: ${{ secrets.DEPLOY_PROJECT_DIR }}
+      GHCR_PULL_USERNAME: ${{ secrets.GHCR_PULL_USERNAME }}
+      GHCR_PULL_TOKEN: ${{ secrets.GHCR_PULL_TOKEN }}
