@@ -34,6 +34,7 @@ jobs:
       deploy: false
       use_ansible: false
       build_and_push_docker: true
+      push_docker_image: ${{ github.event_name == 'push' && github.ref == 'refs/heads/dev' }}
       docker_image_name: koha-docker-build
       orchestration_script_path: 'scripts/deploy-orchestrator.sh'
     secrets:
