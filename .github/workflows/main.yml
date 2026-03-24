@@ -31,7 +31,7 @@ jobs:
     uses: mzhk-repo/shared-workflows/.github/workflows/shared-ci-cd.yml@main
     with:
       environment_name: development
-      deploy: ${{ github.event_name == 'push' && github.ref == 'refs/heads/dev' }}
+      deploy: false
       use_ansible: false
       build_and_push_docker: true
       docker_image_name: koha-docker-build
@@ -55,7 +55,7 @@ jobs:
     uses: mzhk-repo/shared-workflows/.github/workflows/shared-ci-cd.yml@main
     with:
       environment_name: production
-      deploy: ${{ github.event_name == 'release' && startsWith(github.event.release.tag_name, 'v') }}
+      deploy: false
       use_ansible: false
       build_and_push_docker: true
       push_docker_image: ${{ github.event_name == 'release' && startsWith(github.event.release.tag_name, 'v') }}
