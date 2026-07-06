@@ -42,8 +42,10 @@ run_with_warning "koha-plack start" koha-plack --start "${KOHA_INSTANCE}"
 run_with_warning "koha-worker start" koha-worker --start "${KOHA_INSTANCE}"
 run_with_warning "koha-worker long_tasks start" koha-worker --start --queue long_tasks "${KOHA_INSTANCE}"
 
-if [ "${USE_ELASTICSEARCH}" = "true" ]; then
+if [ "${USE_ELASTICSEARCH}" = "true" ] && [ "${KOHA_ES_INDEXER_AUTOSTART}" = "true" ]; then
   if koha-mysql "${KOHA_INSTANCE}" -e "SHOW TABLES LIKE 'systempreferences';" | grep -q systempreferences; then
     run_with_warning "koha-es-indexer start" /usr/sbin/koha-es-indexer --start "${KOHA_INSTANCE}"
   fi
+elif [ "${USE_ELASTICSEARCH}" = "true" ]; then
+  echo "Skipping koha-es-indexer autostart (KOHA_ES_INDEXER_AUTOSTART=${KOHA_ES_INDEXER_AUTOSTART})"
 fi

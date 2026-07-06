@@ -309,6 +309,7 @@ koha-docker-build/
 | Змінна | Default | Призначення |
 |---|---|---|
 | `USE_ELASTICSEARCH` | `false` | Перемикач альтернативного search backend |
+| `KOHA_ES_INDEXER_AUTOSTART` | `true` | Запуск legacy `koha-es-indexer` усередині основного container; встановіть `false`, якщо indexing виконує окремий service |
 | `ELASTICSEARCH_HOST` | `elasticsearch` | Endpoint Elasticsearch при `USE_ELASTICSEARCH=true` |
 | `USE_MEMCACHED` | `yes` | Синхронізується в `koha-sites.conf` |
 | `MEMCACHED_SERVERS` | `memcached:11211` | Адреса memcached для Koha |

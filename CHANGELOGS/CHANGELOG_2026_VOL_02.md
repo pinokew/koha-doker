@@ -28,3 +28,18 @@
 
 1. `CHANGELOG.md` тепер містить тільки статус активного тому та список томів.
 2. Деталізовані записи продовжуються в `CHANGELOGS/CHANGELOG_2026_VOL_02.md`.
+
+## 12) Оновлення 2026-07-06: керований autostart Elasticsearch indexer
+
+### 12.1. Runtime contract
+
+1. Додано `KOHA_ES_INDEXER_AUTOSTART` із backward-compatible default `true`.
+2. `09-start-services.sh` запускає legacy `koha-es-indexer` лише коли одночасно
+   `USE_ELASTICSEARCH=true` і `KOHA_ES_INDEXER_AUTOSTART=true`.
+3. Значення `false` дозволяє deploy-стеку передати indexing окремому service без дубльованого
+   RabbitMQ consumer.
+
+### 12.2. Перевірка
+
+1. `bash -n scripts/koha-setup/lib/koha-setup-common.sh scripts/koha-setup/steps/09-start-services.sh`.
+2. `shellcheck scripts/koha-setup/lib/koha-setup-common.sh scripts/koha-setup/steps/09-start-services.sh`.
